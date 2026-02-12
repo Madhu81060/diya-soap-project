@@ -2,7 +2,12 @@ import { useState } from "react";
 import { MapPin, Phone, Mail, Clock } from "lucide-react";
 import toast from "react-hot-toast";
 
-const API_URL = import.meta.env.VITE_API_URL;
+// ✅ STEP 1 FIX — Safe API URL with fallback
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  "https://diya-backenddiya-backend.onrender.com";
+
+console.log("API_URL:", API_URL); // ✅ debug check
 
 export default function ContactSection() {
   const [form, setForm] = useState({
@@ -47,7 +52,7 @@ export default function ContactSection() {
         message: "",
       });
     } catch (error: any) {
-      console.error(error);
+      console.error("Contact error:", error);
       toast.error(error.message || "Server error. Try again later.");
     } finally {
       setLoading(false);
