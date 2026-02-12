@@ -7,15 +7,18 @@ interface ShopProps {
 }
 
 const TOTAL_MEMBERS = 250;
+
+// ✅ Backend URL
 const BACKEND_URL = "https://diya-backenddiya-backend.onrender.com";
 
 const ShopSection: React.FC<ShopProps> = ({
   setInstruction,
   setMode,
 }) => {
-  const [members, setMembers] = useState<number>(0);
+  const [members, setMembers] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // ✅ FIXED FETCH
   useEffect(() => {
     const fetchMembers = async () => {
       try {
@@ -27,12 +30,8 @@ const ShopSection: React.FC<ShopProps> = ({
 
         console.log("Backend response:", data);
 
-        // ✅ NEW FIX: backend returns { booked: number }
-        if (typeof data?.booked === "number") {
-          setMembers(data.booked);
-        } else {
-          setMembers(0);
-        }
+        // ✅ IMPORTANT FIX HERE
+        setMembers(data.booked || 0);
 
       } catch (err) {
         console.error("Backend error:", err);
