@@ -1,5 +1,4 @@
 import express from "express";
-import cors from "cors";
 import dotenv from "dotenv";
 import nodemailer from "nodemailer";
 import Razorpay from "razorpay";
@@ -7,43 +6,37 @@ import { createClient } from "@supabase/supabase-js";
 
 dotenv.config();
 
-// ================= RAZORPAY SETUP =================
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
-
 // ================= APP SETUP =================
 const app = express();
 
 app.set("trust proxy", 1);
 
-// ✅🔥 PRODUCTION CORS FIX
-const allowedOrigins = [
-  "https://www.diyasoaps.com",
-  "https://diyasoaps.com",
-  "http://localhost:5173",
-];
+// ✅🔥 FINAL CORS FIX (Render + Vercel compatible)
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, OPTIONS"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization"
+  );
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        console.log("Blocked by CORS:", origin);
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    credentials: true,
-  })
-);
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
 
-// ✅ Allow preflight requests
-app.options("*", cors());
+  next();
+});
 
 app.use(express.json());
+
+// ================= RAZORPAY SETUP =================
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
 
 // ================= SUPABASE CLIENT =================
 const supabase = createClient(
@@ -106,7 +99,7 @@ app.post("/create-order", async (req, res) => {
 
     res.json(order);
   } catch (err) {
-    console.error(err);
+    console.error("Razorpay error:", err);
     res.status(500).json({ error: "Order creation failed" });
   }
 });
