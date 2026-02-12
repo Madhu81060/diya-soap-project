@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ✅ Professional font apply */
+:root {
+  font-family: "Poppins", sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+
+  /* ✅ Colourful animated background (professional) */
+  background: linear-gradient(120deg, #fff7ed, #ffedd5, #fef3c7, #fff7ed);
+  background-size: 300% 300%;
+  animation: gradientMove 14s ease infinite;
+}
+
+/* ✅ Background animation */
+@keyframes gradientMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ✅ Scroll reveal (SAFE) 
+   - Default visible (so sections never disappear)
+   - .show can still be used (no harm) */
+.reveal {
+  opacity: 1;                 /* ✅ visible by default */
+  transform: translateY(0);
+  transition: all 700ms ease;
+  will-change: transform, opacity;
+}
+
+.reveal.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ✅ If user prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
