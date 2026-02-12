@@ -8,7 +8,7 @@ setMode: (mode: "single" | "half" | "monthly") => void;
 
 const TOTAL_MEMBERS = 250;
 
-// ✅ FINAL backend URL (use ONLY this everywhere)
+// ✅ FINAL backend URL
 const BACKEND_URL = "https://diya-backenddiya-backend.onrender.com";
 
 const ShopSection: React.FC<ShopProps> = ({
@@ -29,14 +29,16 @@ const res = await fetch(`${BACKEND_URL}/api/slots`);
 
     const data = await res.json();
 
-    // ✅ Count booked + reserved boxes
-    const bookedCount = Array.isArray(data)
-      ? data.filter(
-          (box: any) =>
-            box.status === "reserved" ||
-            box.status === "booked"
-        ).length
-      : 0;
+    // ✅ SAFE array check
+    let bookedCount = 0;
+
+    if (Array.isArray(data)) {
+      bookedCount = data.filter(
+        (box: any) =>
+          box?.status === "reserved" ||
+          box?.status === "booked"
+      ).length;
+    }
 
     setMembers(bookedCount);
   } catch (err) {
@@ -87,25 +89,19 @@ visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
 };
 
 return ( <section className="py-12 sm:py-16 bg-gradient-to-b from-yellow-50 via-amber-50 to-white">
+<motion.div
+initial="hidden"
+whileInView="visible"
+variants={fadeUp}
+viewport={{ once: true }}
+className="text-center mb-12 px-4"
+> <h2 className="text-3xl sm:text-4xl font-bold text-amber-700">
+Shop & Rewards </h2> <p className="text-gray-600 mt-2">
+Premium Natural Soaps + Gold Lucky Draw Offers </p>
+</motion.div>
 
-```
-  <motion.div
-    initial="hidden"
-    whileInView="visible"
-    variants={fadeUp}
-    viewport={{ once: true }}
-    className="text-center mb-12 px-4"
-  >
-    <h2 className="text-3xl sm:text-4xl font-bold text-amber-700">
-      Shop & Rewards
-    </h2>
-    <p className="text-gray-600 mt-2">
-      Premium Natural Soaps + Gold Lucky Draw Offers
-    </p>
-  </motion.div>
 
   <div className="max-w-5xl mx-auto mt-14 bg-white border border-yellow-200 rounded-3xl p-8 text-center shadow-lg mx-4">
-
     <h3 className="text-2xl font-bold mb-4 text-amber-700">
       🎁 Gold Lucky Draw Offer
     </h3>
@@ -127,9 +123,7 @@ return ( <section className="py-12 sm:py-16 bg-gradient-to-b from-yellow-50 via-
         ⏳ Next Draw in <b>{nextDraw}</b> members
       </p>
     </motion.div>
-
   </div>
-
 </section>
 
 
