@@ -16,13 +16,32 @@ const razorpay = new Razorpay({
 // ================= APP SETUP =================
 const app = express();
 
-// ✅🔥 UPDATED CORS FIX (IMPORTANT)
+app.set("trust proxy", 1);
+
+// ✅🔥 PRODUCTION CORS FIX
+const allowedOrigins = [
+  "https://www.diyasoaps.com",
+  "https://diyasoaps.com",
+  "http://localhost:5173",
+];
+
 app.use(
   cors({
-    origin: true, // automatically allows correct origin
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.log("Blocked by CORS:", origin);
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   })
 );
+
+// ✅ Allow preflight requests
+app.options("*", cors());
 
 app.use(express.json());
 
@@ -56,7 +75,10 @@ app.get("/api/slots", async (req, res) => {
       .select("*")
       .order("box_number", { ascending: true });
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      console.error(error);
+      return res.status(500).json({ error: error.message });
+    }
 
     res.json(data);
   } catch (err) {
@@ -71,6 +93,10 @@ app.get("/api/slots", async (req, res) => {
 app.post("/create-order", async (req, res) => {
   try {
     const { amount } = req.body;
+
+    if (!amount) {
+      return res.status(400).json({ error: "Amount required" });
+    }
 
     const order = await razorpay.orders.create({
       amount: amount * 100,
@@ -96,7 +122,10 @@ app.post("/send-contact-mail", async (req, res) => {
       .from("contact_messages")
       .insert([{ name, email, phone, message }]);
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      console.error(error);
+      return res.status(500).json({ error: error.message });
+    }
 
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
@@ -125,6 +154,10 @@ app.post("/reserve-box", async (req, res) => {
   try {
     const boxNumber = parseInt(req.body.box_number, 10);
 
+    if (!boxNumber) {
+      return res.status(400).json({ error: "Invalid box number" });
+    }
+
     const { data: box, error } = await supabase
       .from("grid_boxes")
       .select("*")
@@ -135,13 +168,18 @@ app.post("/reserve-box", async (req, res) => {
       return res.status(400).json({ error: "Box unavailable" });
     }
 
-    await supabase
+    const { error: updateError } = await supabase
       .from("grid_boxes")
       .update({
         status: "reserved",
         reserved_at: new Date().toISOString(),
       })
       .eq("box_number", boxNumber);
+
+    if (updateError) {
+      console.error(updateError);
+      return res.status(500).json({ error: updateError.message });
+    }
 
     res.json({ success: true });
   } catch (err) {
@@ -160,7 +198,10 @@ app.get("/admin/members", async (req, res) => {
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      console.error(error);
+      return res.status(500).json({ error: error.message });
+    }
 
     res.json(data);
   } catch (err) {
