@@ -12,12 +12,12 @@ app.set("trust proxy", 1);
 
 // ================= CORS =================
 app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader(
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header(
     "Access-Control-Allow-Methods",
     "GET, POST, PUT, DELETE, OPTIONS"
   );
-  res.setHeader(
+  res.header(
     "Access-Control-Allow-Headers",
     "Content-Type, Authorization"
   );
@@ -31,17 +31,17 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
-// ================= RAZORPAY =================
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
-
 // ================= SUPABASE =================
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
+
+// ================= RAZORPAY =================
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
 
 // ================= MAIL =================
 const transporter = nodemailer.createTransport({
@@ -52,13 +52,13 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// ================= HEALTH =================
+// ================= HEALTH CHECK =================
 app.get("/", (req, res) => {
   res.send("Backend running ✅");
 });
 
 // =====================================================
-// 🔥 FIXED SLOTS API (IMPORTANT)
+// 🔥 SLOTS API (FINAL FIX)
 // =====================================================
 app.get("/api/slots", async (req, res) => {
   try {
@@ -66,21 +66,20 @@ app.get("/api/slots", async (req, res) => {
       .from("grid_boxes")
       .select("status");
 
-    if (error) {
-      console.error(error);
-      return res.status(500).json({ error: error.message });
-    }
+    if (error) throw error;
 
-    // ✅ count booked slots
+    // ✅ count both reserved + booked
     const booked = data.filter(
-      (b) => b.status === "booked"
+      (b) =>
+        b.status === "reserved" ||
+        b.status === "booked"
     ).length;
 
     res.json({ booked });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    console.error("Slots error:", err);
+    res.status(500).json({ error: "Slots fetch failed" });
   }
 });
 
@@ -102,28 +101,34 @@ app.post("/create-order", async (req, res) => {
     });
 
     res.json(order);
+
   } catch (err) {
-    console.error("Razorpay error:", err);
+    console.error("Order error:", err);
     res.status(500).json({ error: "Order creation failed" });
   }
 });
 
 // =====================================================
-// 📩 CONTACT
+// 📩 CONTACT MAIL (FINAL FIX)
 // =====================================================
 app.post("/send-contact-mail", async (req, res) => {
   try {
     const { name, email, phone, message } = req.body;
 
+    if (!name || !email || !message) {
+      return res.status(400).json({
+        error: "Name, email and message required",
+      });
+    }
+
+    // Save to Supabase
     const { error } = await supabase
       .from("contact_messages")
       .insert([{ name, email, phone, message }]);
 
-    if (error) {
-      console.error(error);
-      return res.status(500).json({ error: error.message });
-    }
+    if (error) throw error;
 
+    // Send email
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: process.env.EMAIL_USER,
@@ -132,15 +137,16 @@ app.post("/send-contact-mail", async (req, res) => {
         <h3>New Contact Message</h3>
         <p><b>Name:</b> ${name}</p>
         <p><b>Email:</b> ${email}</p>
-        <p><b>Phone:</b> ${phone}</p>
+        <p><b>Phone:</b> ${phone || "N/A"}</p>
         <p><b>Message:</b> ${message}</p>
       `,
     });
 
     res.json({ success: true });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    console.error("Contact error:", err);
+    res.status(500).json({ error: "Contact failed" });
   }
 });
 
@@ -173,15 +179,13 @@ app.post("/reserve-box", async (req, res) => {
       })
       .eq("box_number", boxNumber);
 
-    if (updateError) {
-      console.error(updateError);
-      return res.status(500).json({ error: updateError.message });
-    }
+    if (updateError) throw updateError;
 
     res.json({ success: true });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    console.error("Reserve error:", err);
+    res.status(500).json({ error: "Reserve failed" });
   }
 });
 
@@ -195,15 +199,13 @@ app.get("/admin/members", async (req, res) => {
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error(error);
-      return res.status(500).json({ error: error.message });
-    }
+    if (error) throw error;
 
     res.json(data);
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    console.error("Admin error:", err);
+    res.status(500).json({ error: "Admin fetch failed" });
   }
 });
 
