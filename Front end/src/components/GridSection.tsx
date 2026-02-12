@@ -19,7 +19,7 @@ export default function GridSection({
   mode = "single",
 }: GridSectionProps) {
 
-  // ✅ Required boxes based on mode
+  // Required boxes based on mode
   const REQUIRED_BOXES =
     mode === "monthly" ? 4 :
     mode === "half" ? 2 :
@@ -31,23 +31,26 @@ export default function GridSection({
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<number[]>([]);
 
-  // Fetch grid data
+  // ================= FETCH GRID =================
   const fetchBoxes = async () => {
-    setLoading(true);
+    try {
+      setLoading(true);
+      setErrorMsg("");
 
-    const { data, error } = await supabase
-      .from("grid_boxes")
-      .select("*")
-      .order("box_number", { ascending: true });
+      const { data, error } = await supabase
+        .from("grid_boxes")
+        .select("*")
+        .order("box_number", { ascending: true });
 
-    if (error) {
-      setErrorMsg(error.message);
+      if (error) throw error;
+
+      setBoxes((data ?? []) as GridBox[]);
+    } catch (err: any) {
+      console.error("Grid fetch error:", err);
+      setErrorMsg("Failed to load grid. Please refresh.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setBoxes((data ?? []) as GridBox[]);
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -64,17 +67,18 @@ export default function GridSection({
     [boxes]
   );
 
-  const totalPages = Math.ceil(phaseOneBoxes.length / PAGE_SIZE);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(phaseOneBoxes.length / PAGE_SIZE)
+  );
 
   const pageData = phaseOneBoxes.slice(
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE
   );
 
-  // Handle box click
+  // ================= BOX CLICK =================
   const handleBoxClick = (boxNumber: number) => {
-
-    // Prevent duplicate selection
     if (selected.includes(boxNumber)) return;
 
     const updated = [...selected, boxNumber];
@@ -86,7 +90,7 @@ export default function GridSection({
     }
   };
 
-  // Box colors
+  // ================= BOX COLORS =================
   const getBoxColor = (box: GridBox) => {
     if (selected.includes(box.box_number))
       return "bg-yellow-500 text-white border-yellow-600 scale-105 shadow-md";
@@ -103,20 +107,25 @@ export default function GridSection({
     return "bg-gray-100 border-gray-300";
   };
 
-  if (loading)
+  // ================= LOADING =================
+  if (loading) {
     return (
       <div className="flex justify-center py-16 sm:py-20">
         <Loader2 className="animate-spin text-yellow-600" size={40} />
       </div>
     );
+  }
 
-  if (errorMsg)
+  // ================= ERROR =================
+  if (errorMsg) {
     return (
       <div className="text-center py-12 text-red-600 font-bold">
         {errorMsg}
       </div>
     );
+  }
 
+  // ================= UI =================
   return (
     <section
       id="first250"
@@ -137,19 +146,16 @@ export default function GridSection({
         )}
 
         {/* Header */}
-        <div className="mb-8 sm:mb-10 rounded-2xl sm:rounded-3xl p-5 sm:p-8 bg-gradient-to-r from-yellow-500 to-amber-500 text-white text-center shadow-2xl relative overflow-hidden">
-          <div className="absolute inset-0 bg-white/10 backdrop-blur-sm" />
-
-          <div className="relative flex justify-center gap-2 mb-2">
+        <div className="mb-8 sm:mb-10 rounded-2xl sm:rounded-3xl p-5 sm:p-8 bg-gradient-to-r from-yellow-500 to-amber-500 text-white text-center shadow-2xl">
+          <div className="flex justify-center gap-2 mb-2">
             <Sparkles className="animate-pulse" />
             <h3 className="text-xl sm:text-2xl md:text-3xl font-extrabold">
-              Select {REQUIRED_BOXES} Box
-              {REQUIRED_BOXES > 1 && "es"}
+              Select {REQUIRED_BOXES} Box{REQUIRED_BOXES > 1 && "es"}
             </h3>
             <Sparkles className="animate-pulse" />
           </div>
 
-          <p className="relative font-semibold text-sm sm:text-base">
+          <p className="font-semibold text-sm sm:text-base">
             Selected: {selected.length} / {REQUIRED_BOXES}
           </p>
         </div>
@@ -160,38 +166,8 @@ export default function GridSection({
           <CountdownTimer />
         </div>
 
-        {/* Legend */}
-        <div className="flex flex-wrap justify-center gap-5 sm:gap-8 mb-8 font-semibold text-sm sm:text-base">
-
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 sm:w-6 sm:h-6 bg-yellow-200 border border-yellow-400 rounded-md" />
-            Available
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 sm:w-6 sm:h-6 bg-red-300 border border-red-500 rounded-md" />
-            Reserved
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 border border-green-600 rounded-md" />
-            Booked
-          </div>
-
-        </div>
-
         {/* Grid */}
-        <div
-          className="
-            grid
-            grid-cols-4
-            sm:grid-cols-6
-            md:grid-cols-8
-            lg:grid-cols-10
-            xl:grid-cols-12
-            gap-2 sm:gap-3
-          "
-        >
+        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2 sm:gap-3">
           {pageData.map((box) => {
             const disabled = box.status !== "available";
 
@@ -199,17 +175,8 @@ export default function GridSection({
               <button
                 key={box.box_number}
                 disabled={disabled}
-                onClick={() =>
-                  !disabled && handleBoxClick(box.box_number)
-                }
-                className={`
-                  h-10 sm:h-11 md:h-12
-                  rounded-lg sm:rounded-xl
-                  border font-bold
-                  text-xs sm:text-sm
-                  transition-all duration-200
-                  ${getBoxColor(box)}
-                `}
+                onClick={() => !disabled && handleBoxClick(box.box_number)}
+                className={`h-10 sm:h-11 md:h-12 rounded-lg sm:rounded-xl border font-bold text-xs sm:text-sm transition-all duration-200 ${getBoxColor(box)}`}
               >
                 {String(box.box_number).padStart(3, "0")}
               </button>
@@ -218,17 +185,11 @@ export default function GridSection({
         </div>
 
         {/* Pagination */}
-        <div className="
-          flex flex-wrap
-          justify-center items-center
-          gap-4 sm:gap-6
-          mt-8 sm:mt-10
-          text-sm sm:text-base
-        ">
+        <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-6 mt-8 sm:mt-10">
           <button
             disabled={page === 1}
             onClick={() => setPage((p) => p - 1)}
-            className="px-4 sm:px-5 py-2 bg-yellow-100 hover:bg-yellow-200 rounded-xl font-bold disabled:opacity-40 transition"
+            className="px-4 sm:px-5 py-2 bg-yellow-100 hover:bg-yellow-200 rounded-xl font-bold disabled:opacity-40"
           >
             Prev
           </button>
@@ -240,7 +201,7 @@ export default function GridSection({
           <button
             disabled={page === totalPages}
             onClick={() => setPage((p) => p + 1)}
-            className="px-4 sm:px-5 py-2 bg-yellow-100 hover:bg-yellow-200 rounded-xl font-bold disabled:opacity-40 transition"
+            className="px-4 sm:px-5 py-2 bg-yellow-100 hover:bg-yellow-200 rounded-xl font-bold disabled:opacity-40"
           >
             Next
           </button>

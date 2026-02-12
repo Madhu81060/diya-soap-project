@@ -2,6 +2,8 @@ import { useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
+const API_BASE = "https://diyasoap-backend.onrender.com";
+
 interface RegistrationModalProps {
   selectedBoxes: number[];
   onClose: () => void;
@@ -16,7 +18,6 @@ export default function RegistrationModal({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // ✅ price calculation
   const totalPrice =
     selectedBoxes.length === 4 ? 1188 : selectedBoxes.length * 600;
 
@@ -39,7 +40,7 @@ export default function RegistrationModal({
     try {
       const newOrderId = "DSP" + Date.now().toString().slice(-8);
 
-      // Save registration
+      // Save registration in Supabase
       for (const box of selectedBoxes) {
         const { error } = await supabase.from("members").insert({
           box_number: box,
@@ -58,7 +59,7 @@ export default function RegistrationModal({
 
       onSuccess(newOrderId);
 
-      // 👉 Start Razorpay payment
+      // Start payment
       await startPayment(newOrderId);
     } catch (err) {
       console.error(err);
@@ -68,17 +69,16 @@ export default function RegistrationModal({
     }
   };
 
-  // ================= RAZORPAY PAYMENT =================
+  // ================= PAYMENT =================
   const startPayment = async (newOrderId: string) => {
     try {
-      const res = await fetch(
-        "https://diyasoap-backend.onrender.com/create-order", // ✅ FIXED URL
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: totalPrice }),
-        }
-      );
+      const res = await fetch(`${API_BASE}/create-order`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ amount: totalPrice }),
+      });
 
       if (!res.ok) throw new Error("Order creation failed");
 
