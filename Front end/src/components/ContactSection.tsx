@@ -2,15 +2,22 @@ import { useState } from "react";
 import { MapPin, Phone, Mail, Clock } from "lucide-react";
 import toast from "react-hot-toast";
 
-// ✅ STEP 1 FIX — Safe API URL with fallback
+// ✅ Safe backend URL (fallback if env missing)
 const API_URL =
   import.meta.env.VITE_API_URL ||
   "https://diya-backenddiya-backend.onrender.com";
 
-console.log("API_URL:", API_URL); // ✅ debug check
+console.log("Contact API URL:", API_URL);
+
+type ContactForm = {
+  name: string;
+  email: string;
+  phone: string;
+  message: string;
+};
 
 export default function ContactSection() {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<ContactForm>({
     name: "",
     email: "",
     phone: "",
@@ -19,6 +26,7 @@ export default function ContactSection() {
 
   const [loading, setLoading] = useState(false);
 
+  // ================= SUBMIT =================
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -30,6 +38,8 @@ export default function ContactSection() {
     try {
       setLoading(true);
 
+      console.log("Sending contact form:", form);
+
       const res = await fetch(`${API_URL}/send-contact-mail`, {
         method: "POST",
         headers: {
@@ -38,9 +48,16 @@ export default function ContactSection() {
         body: JSON.stringify(form),
       });
 
+      // ✅ handle non-json responses safely
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        console.warn("No JSON response from server");
+      }
+
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to send message");
+        throw new Error(data?.error || "Failed to send message");
       }
 
       toast.success("Message sent successfully! 📩");
@@ -52,7 +69,7 @@ export default function ContactSection() {
         message: "",
       });
     } catch (error: any) {
-      console.error("Contact error:", error);
+      console.error("Contact submit error:", error);
       toast.error(error.message || "Server error. Try again later.");
     } finally {
       setLoading(false);
@@ -83,7 +100,6 @@ export default function ContactSection() {
             </h3>
 
             <div className="space-y-5">
-
               {[
                 {
                   icon: <MapPin size={22} />,
@@ -122,7 +138,6 @@ Madhapur, Hyderabad – 500081`,
                   </div>
                 </div>
               ))}
-
             </div>
           </div>
 
@@ -134,22 +149,35 @@ Madhapur, Hyderabad – 500081`,
 
             <form onSubmit={handleSubmit} className="space-y-5">
 
-              {[
-                { type: "text", key: "name", placeholder: "Your Name" },
-                { type: "email", key: "email", placeholder: "Email Address" },
-                { type: "tel", key: "phone", placeholder: "Phone Number (optional)" },
-              ].map((field) => (
-                <input
-                  key={field.key}
-                  type={field.type}
-                  value={(form as any)[field.key]}
-                  onChange={(e) =>
-                    setForm({ ...form, [field.key]: e.target.value })
-                  }
-                  placeholder={field.placeholder}
-                  className="w-full px-4 py-3 rounded-lg border border-amber-300 focus:ring-2 focus:ring-amber-500 outline-none"
-                />
-              ))}
+              <input
+                type="text"
+                value={form.name}
+                onChange={(e) =>
+                  setForm({ ...form, name: e.target.value })
+                }
+                placeholder="Your Name"
+                className="w-full px-4 py-3 rounded-lg border border-amber-300 focus:ring-2 focus:ring-amber-500 outline-none"
+              />
+
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) =>
+                  setForm({ ...form, email: e.target.value })
+                }
+                placeholder="Email Address"
+                className="w-full px-4 py-3 rounded-lg border border-amber-300 focus:ring-2 focus:ring-amber-500 outline-none"
+              />
+
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={(e) =>
+                  setForm({ ...form, phone: e.target.value })
+                }
+                placeholder="Phone Number (optional)"
+                className="w-full px-4 py-3 rounded-lg border border-amber-300 focus:ring-2 focus:ring-amber-500 outline-none"
+              />
 
               <textarea
                 rows={4}
