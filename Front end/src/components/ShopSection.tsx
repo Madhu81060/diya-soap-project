@@ -8,30 +8,35 @@ interface ShopProps {
 
 const TOTAL_MEMBERS = 250;
 
-// ✅ Backend URL
-const BACKEND_URL = "https://diya-backenddiya-backend.onrender.com";
+// ✅ Correct backend URL
+const BACKEND_URL = "https://diya-backend.onrender.com";
 
 const ShopSection: React.FC<ShopProps> = ({
   setInstruction,
   setMode,
 }) => {
-  const [members, setMembers] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [members, setMembers] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  // ✅ FIXED FETCH
   useEffect(() => {
     const fetchMembers = async () => {
       try {
         const res = await fetch(`${BACKEND_URL}/api/slots`);
 
-        if (!res.ok) throw new Error("Fetch failed");
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
 
         const data = await res.json();
 
         console.log("Backend response:", data);
 
-        // ✅ backend returns { booked: number }
-        setMembers(data.booked || 0);
+        // ✅ Safe check
+        if (data && typeof data.booked === "number") {
+          setMembers(data.booked);
+        } else {
+          setMembers(0);
+        }
 
       } catch (err) {
         console.error("Backend error:", err);
