@@ -5,8 +5,8 @@ import cowImg from "../assets/cow.png";
 export default function HeroSection() {
   const TOTAL_SLOTS = 250;
 
-  const BACKEND_URL =
-    "https://diya-backenddiya-backend.onrender.com";
+  // ✅ FIXED backend URL
+  const BACKEND_URL = "https://diya-backend.onrender.com";
 
   const [booked, setBooked] = useState(0);
 
@@ -19,12 +19,10 @@ export default function HeroSection() {
 
         const data = await res.json();
 
-        // ✅ count booked boxes
-        const bookedCount = data.filter(
-          (box: any) => box.status === "booked"
-        ).length;
+        console.log("Backend response:", data);
 
-        setBooked(bookedCount);
+        // ✅ backend returns { booked: number }
+        setBooked(data.booked || 0);
 
       } catch (err) {
         console.error("Backend error:", err);
@@ -44,7 +42,6 @@ export default function HeroSection() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 items-center">
 
-          {/* LEFT */}
           <div className="space-y-4">
 
             <span className="inline-block px-4 py-2 rounded-full bg-gradient-to-r from-[#fde6c8] to-[#f8d39c] text-[#8b4513] font-semibold text-xs sm:text-sm border border-[#f3c98b]">
@@ -63,7 +60,6 @@ export default function HeroSection() {
               gentle on skin, powerful in results.
             </p>
 
-            {/* Slots */}
             <div className="bg-white rounded-xl p-4 border border-[#f3c98b] shadow-sm max-w-xl">
 
               <p className="font-semibold text-gray-900 text-sm sm:text-base">
@@ -96,7 +92,6 @@ export default function HeroSection() {
 
           </div>
 
-          {/* RIGHT */}
           <div className="flex justify-center lg:justify-end">
 
             <div className="relative w-full max-w-md lg:max-w-xl">
