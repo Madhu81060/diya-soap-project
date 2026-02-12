@@ -21,7 +21,7 @@ export default function VideosSection() {
 
   const images = [modelWithBox, soapInHand];
 
-  // ESC key close support
+  /* ---------------- ESC KEY SUPPORT ---------------- */
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -29,20 +29,45 @@ export default function VideosSection() {
         setVideoModal(false);
       }
     };
+
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  // Play / pause
+  /* ---------------- LOCK BODY SCROLL WHEN MODAL OPEN ---------------- */
+  useEffect(() => {
+    if (modalImage || videoModal) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
+  }, [modalImage, videoModal]);
+
+  /* ---------------- SYNC VIDEO PLAY STATE ---------------- */
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+
+    video.addEventListener("play", onPlay);
+    video.addEventListener("pause", onPause);
+
+    return () => {
+      video.removeEventListener("play", onPlay);
+      video.removeEventListener("pause", onPause);
+    };
+  }, []);
+
+  /* ---------------- PLAY / PAUSE ---------------- */
   const toggleVideo = () => {
     if (!videoRef.current) return;
 
-    if (isPlaying) {
-      videoRef.current.pause();
-      setIsPlaying(false);
-    } else {
+    if (videoRef.current.paused) {
       videoRef.current.play().catch(() => {});
-      setIsPlaying(true);
+    } else {
+      videoRef.current.pause();
     }
   };
 
@@ -54,7 +79,7 @@ export default function VideosSection() {
     >
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
 
-        {/* Heading */}
+        {/* ---------------- HEADING ---------------- */}
         <div className="text-center mb-12">
           <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-100 text-[#8b4513] font-semibold text-sm border">
             <Video size={16} />
@@ -66,10 +91,10 @@ export default function VideosSection() {
           </h2>
         </div>
 
-        {/* Grid */}
+        {/* ---------------- GRID ---------------- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-          {/* VIDEO CARD */}
+          {/* ================= VIDEO CARD ================= */}
           <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
 
             <div className="p-5 border-b flex justify-between items-center">
@@ -86,7 +111,6 @@ export default function VideosSection() {
             <div className="p-5">
               <div className="relative rounded-2xl overflow-hidden bg-black">
 
-                {/* ✅ FIXED poster cropping */}
                 <video
                   ref={videoRef}
                   muted
@@ -98,7 +122,7 @@ export default function VideosSection() {
                   <source src={promoVideo} type="video/mp4" />
                 </video>
 
-                {/* Play button */}
+                {/* PLAY BUTTON */}
                 <button
                   onClick={toggleVideo}
                   className="absolute inset-0 flex items-center justify-center"
@@ -108,7 +132,7 @@ export default function VideosSection() {
                   </div>
                 </button>
 
-                {/* Fullscreen */}
+                {/* FULLSCREEN */}
                 <button
                   onClick={() => setVideoModal(true)}
                   className="absolute bottom-3 right-3 bg-white p-2 rounded-full shadow"
@@ -120,7 +144,7 @@ export default function VideosSection() {
             </div>
           </div>
 
-          {/* IMAGE CARD */}
+          {/* ================= IMAGE CARD ================= */}
           <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
 
             <div className="p-5 border-b flex items-center gap-2 font-extrabold text-[#7a2e12]">
@@ -150,7 +174,7 @@ export default function VideosSection() {
         </div>
       </div>
 
-      {/* IMAGE MODAL */}
+      {/* ================= IMAGE MODAL ================= */}
       {modalImage && (
         <div
           className="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
@@ -158,10 +182,11 @@ export default function VideosSection() {
         >
           <img
             src={modalImage}
+            alt="Preview"
+            onClick={(e) => e.stopPropagation()}
             className="max-w-[92%] max-h-[92%] rounded-xl"
           />
 
-          {/* BIG CLOSE BUTTON */}
           <button
             onClick={() => setModalImage(null)}
             className="absolute top-6 right-6 bg-white text-black p-3 rounded-full shadow-xl"
@@ -171,18 +196,21 @@ export default function VideosSection() {
         </div>
       )}
 
-      {/* VIDEO FULLSCREEN MODAL */}
+      {/* ================= VIDEO MODAL ================= */}
       {videoModal && (
-        <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
+        <div
+          className="fixed inset-0 bg-black z-50 flex items-center justify-center"
+          onClick={() => setVideoModal(false)}
+        >
 
           <video
             src={promoVideo}
             controls
             autoPlay
+            onClick={(e) => e.stopPropagation()}
             className="w-full h-full object-contain"
           />
 
-          {/* ✅ BIG BACK BUTTON */}
           <button
             onClick={() => setVideoModal(false)}
             className="absolute top-6 right-6 bg-white text-black p-3 rounded-full shadow-xl"
