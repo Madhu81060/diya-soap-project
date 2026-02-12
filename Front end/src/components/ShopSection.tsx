@@ -30,7 +30,7 @@ const ShopSection: React.FC<ShopProps> = ({
 
         console.log("Backend response:", data);
 
-        // ✅ IMPORTANT FIX HERE
+        // ✅ backend returns { booked: number }
         setMembers(data.booked || 0);
 
       } catch (err) {
