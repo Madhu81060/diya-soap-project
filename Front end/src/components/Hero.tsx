@@ -5,23 +5,27 @@ import cowImg from "../assets/cow.png";
 export default function HeroSection() {
   const TOTAL_SLOTS = 250;
 
-  // ✅ REAL backend URL
   const BACKEND_URL =
     "https://diya-backenddiya-backend.onrender.com";
 
-  const [booked, setBooked] = useState<number | null>(null);
+  const [booked, setBooked] = useState(0);
 
   useEffect(() => {
     const fetchSlots = async () => {
       try {
         const res = await fetch(`${BACKEND_URL}/api/slots`);
 
-        if (!res.ok) throw new Error("Failed");
+        if (!res.ok) throw new Error("Fetch failed");
 
         const data = await res.json();
 
-        // ✅ safe fallback
-        setBooked(data?.booked ?? 0);
+        // ✅ count booked boxes
+        const bookedCount = data.filter(
+          (box: any) => box.status === "booked"
+        ).length;
+
+        setBooked(bookedCount);
+
       } catch (err) {
         console.error("Backend error:", err);
         setBooked(0);
@@ -31,9 +35,8 @@ export default function HeroSection() {
     fetchSlots();
   }, []);
 
-  const safeBooked = booked ?? 0;
-  const available = TOTAL_SLOTS - safeBooked;
-  const progress = (safeBooked / TOTAL_SLOTS) * 100;
+  const available = TOTAL_SLOTS - booked;
+  const progress = (booked / TOTAL_SLOTS) * 100;
 
   return (
     <section id="home" className="bg-[#fffaf3]">
@@ -68,7 +71,7 @@ export default function HeroSection() {
               </p>
 
               <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                Available: <b>{available}</b> · Booked: <b>{safeBooked}</b>
+                Available: <b>{available}</b> · Booked: <b>{booked}</b>
               </p>
 
               <div className="mt-3 h-2 w-full bg-[#fde6c8] rounded-full overflow-hidden">
@@ -84,7 +87,6 @@ export default function HeroSection() {
 
             </div>
 
-            {/* CTA */}
             <a
               href="#grid"
               className="inline-block px-7 py-3 rounded-full bg-gradient-to-r from-[#d97706] to-[#b45309] text-white font-bold shadow-lg hover:scale-105 transition text-sm sm:text-base"
@@ -94,7 +96,7 @@ export default function HeroSection() {
 
           </div>
 
-          {/* RIGHT IMAGE */}
+          {/* RIGHT */}
           <div className="flex justify-center lg:justify-end">
 
             <div className="relative w-full max-w-md lg:max-w-xl">
@@ -105,7 +107,6 @@ export default function HeroSection() {
                 className="w-full h-auto rounded-2xl shadow-xl border border-[#f1c27d] object-cover"
               />
 
-              {/* Badge */}
               <div className="absolute top-2 right-2 bg-white border border-green-300 rounded-lg shadow-md px-2 py-1.5 flex items-center gap-2">
 
                 <img
