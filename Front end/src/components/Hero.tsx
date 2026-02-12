@@ -4,15 +4,26 @@ import cowImg from "../assets/cow.png";
 
 export default function HeroSection() {
   const TOTAL_SLOTS = 250;
+
+  // ✅ REAL backend URL
+  const BACKEND_URL =
+    "https://diya-backenddiya-backend.onrender.com";
+
   const [booked, setBooked] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchSlots = async () => {
       try {
-        const res = await fetch("https://your-backend-url/api/slots");
+        const res = await fetch(`${BACKEND_URL}/api/slots`);
+
+        if (!res.ok) throw new Error("Failed");
+
         const data = await res.json();
-        setBooked(data.booked);
-      } catch {
+
+        // ✅ safe fallback
+        setBooked(data?.booked ?? 0);
+      } catch (err) {
+        console.error("Backend error:", err);
         setBooked(0);
       }
     };
@@ -26,8 +37,6 @@ export default function HeroSection() {
 
   return (
     <section id="home" className="bg-[#fffaf3]">
-
-      {/* 🔥 Reduced top padding */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 lg:py-10">
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 items-center">
@@ -88,34 +97,16 @@ export default function HeroSection() {
           {/* RIGHT IMAGE */}
           <div className="flex justify-center lg:justify-end">
 
-            {/* 🔥 Image wrapper bigger */}
             <div className="relative w-full max-w-md lg:max-w-xl">
 
-              {/* Image fills better */}
               <img
                 src={heroSoap}
                 alt="Diya Red Sandal Soap"
-                className="
-                  w-full
-                  h-auto
-                  rounded-2xl
-                  shadow-xl
-                  border border-[#f1c27d]
-                  object-cover
-                "
+                className="w-full h-auto rounded-2xl shadow-xl border border-[#f1c27d] object-cover"
               />
 
               {/* Badge */}
-              <div className="
-                absolute
-                top-2 right-2
-                bg-white
-                border border-green-300
-                rounded-lg
-                shadow-md
-                px-2 py-1.5
-                flex items-center gap-2
-              ">
+              <div className="absolute top-2 right-2 bg-white border border-green-300 rounded-lg shadow-md px-2 py-1.5 flex items-center gap-2">
 
                 <img
                   src={cowImg}

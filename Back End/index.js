@@ -6,12 +6,11 @@ import { createClient } from "@supabase/supabase-js";
 
 dotenv.config();
 
-// ================= APP SETUP =================
 const app = express();
 
 app.set("trust proxy", 1);
 
-// ✅🔥 FINAL CORS FIX (Render + Vercel compatible)
+// ================= CORS =================
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader(
@@ -32,13 +31,13 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
-// ================= RAZORPAY SETUP =================
+// ================= RAZORPAY =================
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-// ================= SUPABASE CLIENT =================
+// ================= SUPABASE =================
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -53,27 +52,32 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// ================= HEALTH CHECK =================
+// ================= HEALTH =================
 app.get("/", (req, res) => {
   res.send("Backend running ✅");
 });
 
 // =====================================================
-// 🔥 SLOTS API
+// 🔥 FIXED SLOTS API (IMPORTANT)
 // =====================================================
 app.get("/api/slots", async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("grid_boxes")
-      .select("*")
-      .order("box_number", { ascending: true });
+      .select("status");
 
     if (error) {
       console.error(error);
       return res.status(500).json({ error: error.message });
     }
 
-    res.json(data);
+    // ✅ count booked slots
+    const booked = data.filter(
+      (b) => b.status === "booked"
+    ).length;
+
+    res.json({ booked });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
