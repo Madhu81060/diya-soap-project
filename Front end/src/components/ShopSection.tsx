@@ -7,8 +7,6 @@ interface ShopProps {
 }
 
 const TOTAL_MEMBERS = 250;
-
-// ✅ Backend URL
 const BACKEND_URL = "https://diya-backenddiya-backend.onrender.com";
 
 const ShopSection: React.FC<ShopProps> = ({
@@ -18,7 +16,6 @@ const ShopSection: React.FC<ShopProps> = ({
   const [members, setMembers] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
-  // ================= FETCH MEMBERS =================
   useEffect(() => {
     const fetchMembers = async () => {
       try {
@@ -30,24 +27,13 @@ const ShopSection: React.FC<ShopProps> = ({
 
         console.log("Backend response:", data);
 
-        let slotsArray: any[] = [];
-
-        // ✅ Handle multiple backend response formats safely
-        if (Array.isArray(data)) {
-          slotsArray = data;
-        } else if (Array.isArray(data?.slots)) {
-          slotsArray = data.slots;
-        } else if (Array.isArray(data?.data)) {
-          slotsArray = data.data;
+        // ✅ NEW FIX: backend returns { booked: number }
+        if (typeof data?.booked === "number") {
+          setMembers(data.booked);
+        } else {
+          setMembers(0);
         }
 
-        const bookedCount = slotsArray.filter(
-          (box) =>
-            box?.status === "reserved" ||
-            box?.status === "booked"
-        ).length;
-
-        setMembers(bookedCount);
       } catch (err) {
         console.error("Backend error:", err);
         setMembers(0);
@@ -63,28 +49,6 @@ const ShopSection: React.FC<ShopProps> = ({
   const nextDraw =
     remainder === 0 ? TOTAL_MEMBERS : TOTAL_MEMBERS - remainder;
 
-  // ================= GRID NAVIGATION =================
-  const goToGrid = (boxes: number) => {
-    let mode: "single" | "half" | "monthly";
-
-    if (boxes === 1) mode = "single";
-    else if (boxes === 2) mode = "half";
-    else mode = "monthly";
-
-    setMode(mode);
-
-    setInstruction(
-      boxes === 4
-        ? "Select any 4 boxes below. One registration covers all 4 boxes."
-        : boxes === 2
-        ? "Select any 2 boxes below to continue purchase."
-        : "Select 1 box below to continue purchase."
-    );
-
-    const target = document.getElementById("first250");
-    target?.scrollIntoView({ behavior: "smooth" });
-  };
-
   const fadeUp = {
     hidden: { opacity: 0, y: 40 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
@@ -92,6 +56,7 @@ const ShopSection: React.FC<ShopProps> = ({
 
   return (
     <section className="py-12 sm:py-16 bg-gradient-to-b from-yellow-50 via-amber-50 to-white">
+
       <motion.div
         initial="hidden"
         whileInView="visible"
@@ -108,6 +73,7 @@ const ShopSection: React.FC<ShopProps> = ({
       </motion.div>
 
       <div className="max-w-5xl mx-auto mt-14 bg-white border border-yellow-200 rounded-3xl p-8 text-center shadow-lg mx-4">
+
         <h3 className="text-2xl font-bold mb-4 text-amber-700">
           🎁 Gold Lucky Draw Offer
         </h3>
@@ -129,7 +95,9 @@ const ShopSection: React.FC<ShopProps> = ({
             ⏳ Next Draw in <b>{nextDraw}</b> members
           </p>
         </motion.div>
+
       </div>
+
     </section>
   );
 };
