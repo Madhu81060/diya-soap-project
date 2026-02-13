@@ -2,7 +2,11 @@ import logo from "../assets/logo.png";
 import { Menu, X, PhoneCall, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 
-export default function Navbar() {
+interface NavbarProps {
+  onNavigate: (section: string) => void;
+}
+
+export default function Navbar({ onNavigate }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [active, setActive] = useState("home");
   const [scrolled, setScrolled] = useState(false);
@@ -22,15 +26,7 @@ export default function Navbar() {
   ];
 
   const go = (section: string) => {
-    const el = document.getElementById(section);
-
-    if (el) {
-      el.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }
-
+    onNavigate(section); // ✅ USE APP NAVIGATION
     setActive(section);
     setIsMenuOpen(false);
   };
