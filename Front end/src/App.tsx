@@ -30,8 +30,6 @@ import RefundPolicy from "./pages/RefundPolicy";
 import ShippingPolicy from "./pages/ShippingPolicy";
 import ContactPage from "./pages/ContactPage";
 
-// ================= LANDING PAGE =================
-
 function LandingPage() {
   const [selectedBoxes, setSelectedBoxes] = useState<number[] | null>(null);
 
@@ -95,19 +93,11 @@ function LandingPage() {
         />
       </div>
 
-      {/* SHOP — ✅ UPDATED */}
+      {/* ✅ SHOP — FIXED */}
       <div id="shop" ref={shopRef} className="reveal">
         <ShopSection
-          onBuy={(boxes) => {
+          onBuy={() => {
             handleNavigate("grid");
-
-            setTimeout(() => {
-              const selected = Array.from(
-                { length: boxes },
-                (_, i) => i + 1
-              );
-              setSelectedBoxes(selected);
-            }, 400);
           }}
         />
       </div>
@@ -152,18 +142,15 @@ function LandingPage() {
         />
       )}
 
-      {/* Floating actions */}
       <FloatingActions
         phoneNumber="+918125134699"
         whatsappNumber="918125134699"
         onJoin={() => handleNavigate("grid")}
       />
 
-      {/* Admin button */}
       <button
         onClick={() => navigate("/admin")}
         className="fixed right-3 bottom-4 bg-gray-900 text-white w-12 h-12 rounded-full shadow-lg hover:bg-black flex items-center justify-center z-50"
-        title="Admin Panel"
       >
         <Shield size={20} />
       </button>
@@ -171,8 +158,6 @@ function LandingPage() {
     </div>
   );
 }
-
-// ================= ROUTER =================
 
 export default function App() {
   return (
