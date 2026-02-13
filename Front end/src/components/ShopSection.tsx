@@ -1,43 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
-interface ShopProps {
-  setInstruction: (msg: string) => void;
-  setMode: (mode: "single" | "half" | "monthly") => void;
-}
-
 const TOTAL_MEMBERS = 250;
-
-// ✅ Correct backend URL
 const BACKEND_URL = "https://diya-backend.onrender.com";
 
-const ShopSection: React.FC<ShopProps> = ({
-  setInstruction,
-  setMode,
-}) => {
-  const [members, setMembers] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(true);
+const ShopSection = () => {
+  const [members, setMembers] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchMembers = async () => {
       try {
         const res = await fetch(`${BACKEND_URL}/api/slots`);
-
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-
         const data = await res.json();
 
-        console.log("Backend response:", data);
-
-        // ✅ Safe check
-        if (data && typeof data.booked === "number") {
-          setMembers(data.booked);
-        } else {
-          setMembers(0);
-        }
-
+        setMembers(data.booked || 0);
       } catch (err) {
         console.error("Backend error:", err);
         setMembers(0);
@@ -53,49 +30,118 @@ const ShopSection: React.FC<ShopProps> = ({
   const nextDraw =
     remainder === 0 ? TOTAL_MEMBERS : TOTAL_MEMBERS - remainder;
 
-  const fadeUp = {
-    hidden: { opacity: 0, y: 40 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-  };
-
   return (
-    <section className="py-12 sm:py-16 bg-gradient-to-b from-yellow-50 via-amber-50 to-white">
+    <section id="grid" className="py-16 bg-gradient-to-b from-yellow-50 to-white">
 
-      <motion.div
-        initial="hidden"
-        whileInView="visible"
-        variants={fadeUp}
-        viewport={{ once: true }}
-        className="text-center mb-12 px-4"
-      >
-        <h2 className="text-3xl sm:text-4xl font-bold text-amber-700">
+      {/* Title */}
+      <div className="text-center mb-12 px-4">
+        <h2 className="text-4xl font-bold text-amber-700">
           Shop & Rewards
         </h2>
         <p className="text-gray-600 mt-2">
           Premium Natural Soaps + Gold Lucky Draw Offers
         </p>
-      </motion.div>
+      </div>
 
-      <div className="max-w-5xl mx-auto mt-14 bg-white border border-yellow-200 rounded-3xl p-8 text-center shadow-lg mx-4">
+      {/* 3 BOX GRID */}
+      <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-8 px-4">
 
-        <h3 className="text-2xl font-bold mb-4 text-amber-700">
+        {/* Box 1 */}
+        <div className="bg-white p-8 rounded-2xl shadow-lg border">
+          <h3 className="text-2xl font-bold text-amber-700 mb-4">
+            📦 Single Box
+          </h3>
+
+          <ul className="space-y-2 text-gray-700">
+            <li>✔ 3 Premium Handmade Soaps</li>
+            <li>✔ Natural Ingredients</li>
+            <li>✔ Skin Friendly Formula</li>
+          </ul>
+
+          <p className="text-3xl font-bold text-amber-800 mt-6">
+            ₹600
+          </p>
+
+          <button className="w-full mt-4 bg-orange-600 text-white py-3 rounded-xl font-bold hover:bg-orange-700">
+            Buy 1 Box
+          </button>
+        </div>
+
+        {/* Box 2 */}
+        <div className="bg-white p-8 rounded-2xl shadow-lg border">
+          <h3 className="text-2xl font-bold text-amber-700 mb-4">
+            ⭐ Half Yearly Pack
+          </h3>
+
+          <ul className="space-y-2 text-gray-700">
+            <li>✔ 6 Soaps (2 Boxes)</li>
+            <li>✔ Family Saver Pack</li>
+            <li>✔ Extra Lucky Draw Entry</li>
+          </ul>
+
+          <p className="text-3xl font-bold text-amber-800 mt-6">
+            ₹900
+          </p>
+
+          <button className="w-full mt-4 bg-orange-600 text-white py-3 rounded-xl font-bold hover:bg-orange-700">
+            Buy Half Yearly
+          </button>
+        </div>
+
+        {/* Box 3 */}
+        <div className="bg-yellow-400 p-8 rounded-2xl shadow-xl border relative">
+
+          <span className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full text-sm font-bold">
+            BEST OFFER
+          </span>
+
+          <h3 className="text-2xl font-bold mb-4">
+            🎉 Annual Offer Pack
+          </h3>
+
+          <ul className="space-y-2">
+            <li>✔ 12 Soaps (4 Boxes)</li>
+            <li>✔ Maximum Savings Pack</li>
+            <li>✔ Free Lucky Draw Entry</li>
+          </ul>
+
+          <p className="mt-6">
+            <span className="line-through text-gray-700 mr-2">
+              ₹2400
+            </span>
+            <span className="text-3xl font-bold">
+              ₹1188
+            </span>
+          </p>
+
+          <button className="w-full mt-4 bg-white text-black py-3 rounded-xl font-bold hover:bg-gray-100">
+            Buy Annual Pack
+          </button>
+        </div>
+
+      </div>
+
+      {/* Lucky Draw Status */}
+      <div className="max-w-4xl mx-auto mt-16 bg-white p-8 rounded-3xl shadow-lg text-center">
+
+        <h3 className="text-2xl font-bold text-amber-700 mb-4">
           🎁 Gold Lucky Draw Offer
         </h3>
 
-        <p className="text-lg mb-2 text-gray-700">
+        <p className="text-lg mb-4">
           Every <b>250 members</b> → 1 Winner gets <b>1g Gold Coin</b>
         </p>
 
         <motion.div
           animate={{ scale: [1, 1.03, 1] }}
           transition={{ repeat: Infinity, duration: 2 }}
-          className="bg-yellow-50 p-5 rounded-xl shadow-inner"
+          className="bg-yellow-50 p-5 rounded-xl"
         >
-          <p className="text-xl font-bold text-amber-700">
+          <p className="text-xl font-bold">
             👥 Members Joined: {loading ? "Loading..." : members}
           </p>
 
-          <p className="mt-2 text-lg text-gray-700">
+          <p className="mt-2 text-lg">
             ⏳ Next Draw in <b>{nextDraw}</b> members
           </p>
         </motion.div>
