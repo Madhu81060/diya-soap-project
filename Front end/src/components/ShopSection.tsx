@@ -6,19 +6,27 @@ interface ShopProps {
 }
 
 const TOTAL_MEMBERS = 250;
-const BACKEND_URL = "https://diya-backend.onrender.com";
+
+// ✅ CORRECT BACKEND URL
+const BACKEND_URL =
+  "https://diya-backenddiya-backend.onrender.com";
 
 const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
   const [members, setMembers] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // ================= FETCH MEMBERS =================
   useEffect(() => {
     const fetchMembers = async () => {
       try {
         const res = await fetch(`${BACKEND_URL}/api/slots`);
+
+        if (!res.ok) throw new Error("Fetch failed");
+
         const data = await res.json();
         setMembers(data.booked || 0);
-      } catch {
+      } catch (err) {
+        console.error("Members fetch error:", err);
         setMembers(0);
       } finally {
         setLoading(false);
@@ -27,6 +35,22 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
 
     fetchMembers();
   }, []);
+
+  // ================= BUY CLICK =================
+  const handleBuyClick = (count: number) => {
+    // send to parent
+    onBuy(count);
+
+    // scroll to grid
+    const grid = document.getElementById("grid");
+
+    if (grid) {
+      grid.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  };
 
   const remainder = members % TOTAL_MEMBERS;
   const nextDraw =
@@ -40,12 +64,13 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
         <h2 className="text-4xl font-bold text-amber-700">
           Shop & Rewards
         </h2>
+
         <p className="text-gray-600 mt-2">
           Premium Natural Soaps + Gold Lucky Draw Offers
         </p>
       </div>
 
-      {/* ✅ FIXED GRID */}
+      {/* PACK GRID */}
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 px-4">
 
         {/* SINGLE */}
@@ -60,11 +85,13 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
             <li>✔ Skin Friendly Formula</li>
           </ul>
 
-          <p className="text-3xl font-bold text-amber-800 mt-6">₹600</p>
+          <p className="text-3xl font-bold text-amber-800 mt-6">
+            ₹600
+          </p>
 
           <button
-            onClick={() => onBuy(1)}
-            className="w-full mt-4 bg-orange-600 text-white py-3 rounded-xl font-bold"
+            onClick={() => handleBuyClick(1)}
+            className="w-full mt-4 bg-orange-600 text-white py-3 rounded-xl font-bold hover:bg-orange-700"
           >
             Buy 1 Box
           </button>
@@ -81,11 +108,13 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
             <li>✔ Extra Lucky Draw Entry</li>
           </ul>
 
-          <p className="text-3xl font-bold text-amber-800 mt-6">₹900</p>
+          <p className="text-3xl font-bold text-amber-800 mt-6">
+            ₹900
+          </p>
 
           <button
-            onClick={() => onBuy(2)}
-            className="w-full mt-4 bg-orange-600 text-white py-3 rounded-xl font-bold"
+            onClick={() => handleBuyClick(2)}
+            className="w-full mt-4 bg-orange-600 text-white py-3 rounded-xl font-bold hover:bg-orange-700"
           >
             Buy Half Yearly
           </button>
@@ -108,13 +137,18 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
           </ul>
 
           <p className="mt-6">
-            <span className="line-through mr-2">₹2400</span>
-            <span className="text-3xl font-bold">₹1188</span>
+            <span className="line-through mr-2">
+              ₹2400
+            </span>
+
+            <span className="text-3xl font-bold">
+              ₹1188
+            </span>
           </p>
 
           <button
-            onClick={() => onBuy(4)}
-            className="w-full mt-4 bg-white text-black py-3 rounded-xl font-bold"
+            onClick={() => handleBuyClick(4)}
+            className="w-full mt-4 bg-white text-black py-3 rounded-xl font-bold hover:bg-gray-100"
           >
             Buy Annual Pack
           </button>
@@ -130,7 +164,8 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
         </h3>
 
         <p className="text-lg mb-4">
-          Every <b>250 members</b> → 1 Winner gets <b>1g Gold Coin</b>
+          Every <b>250 members</b> → 1 Winner gets
+          <b> 1g Gold Coin</b>
         </p>
 
         <motion.div
@@ -139,11 +174,13 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
           className="bg-yellow-50 p-5 rounded-xl"
         >
           <p className="text-xl font-bold">
-            👥 Members Joined: {loading ? "Loading..." : members}
+            👥 Members Joined:{" "}
+            {loading ? "Loading..." : members}
           </p>
 
           <p className="mt-2 text-lg">
-            ⏳ Next Draw in <b>{nextDraw}</b> members
+            ⏳ Next Draw in{" "}
+            <b>{nextDraw}</b> members
           </p>
         </motion.div>
 

@@ -1,206 +1,231 @@
 import express from "express";
 import dotenv from "dotenv";
 import Razorpay from "razorpay";
+import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 
 dotenv.config();
 
 const app = express();
-
 app.set("trust proxy", 1);
-
-// ================= CORS =================
-app.use((req, res, next) => {
-res.header("Access-Control-Allow-Origin", "*");
-res.header(
-"Access-Control-Allow-Methods",
-"GET, POST, PUT, DELETE, OPTIONS"
-);
-res.header(
-"Access-Control-Allow-Headers",
-"Content-Type, Authorization"
-);
-
-if (req.method === "OPTIONS") {
-return res.sendStatus(200);
-}
-
-next();
-});
-
 app.use(express.json());
 
-// ================= SUPABASE =================
+/* ================= CORS ================= */
+
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") return res.sendStatus(200);
+  next();
+});
+
+/* ================= SUPABASE ================= */
+
 const supabase = createClient(
-process.env.SUPABASE_URL,
-process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// ================= RAZORPAY =================
+/* ================= RAZORPAY ================= */
+
 const razorpay = new Razorpay({
-key_id: process.env.RAZORPAY_KEY_ID,
-key_secret: process.env.RAZORPAY_KEY_SECRET,
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-// ================= RESEND =================
+/* ================= EMAIL ================= */
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// ================= HEALTH CHECK =================
+/* ================= AUTO CLEAN RESERVED ================= */
+
+setInterval(async () => {
+  const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
+
+  await supabase
+    .from("grid_boxes")
+    .update({
+      status: "available",
+      reserved_at: null,
+    })
+    .eq("status", "reserved")
+    .lt("reserved_at", fiveMinAgo.toISOString());
+
+  console.log("🧹 Cleaned old reserved slots");
+}, 60000);
+
+/* ================= HEALTH ================= */
+
 app.get("/", (req, res) => {
-res.send("Backend running ✅");
+  res.send("Backend running ✅");
 });
 
-// ================= SLOTS =================
+/* ================= SLOT COUNT ================= */
+
 app.get("/api/slots", async (req, res) => {
-try {
-const { data, error } = await supabase
-.from("grid_boxes")
-.select("status");
+  const { count } = await supabase
+    .from("grid_boxes")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "booked");
 
-
-if (error) throw error;
-
-const booked = data.filter(
-  (b) => b.status === "reserved" || b.status === "booked"
-).length;
-
-res.json({ booked });
-
-
-} catch (err) {
-console.error("Slots error:", err);
-res.status(500).json({ error: "Slots fetch failed" });
-}
+  res.json({ booked: count || 0 });
 });
 
-// ================= CREATE ORDER =================
+/* ================= RESERVE BOXES (FIXED ATOMIC) ================= */
+
+app.post("/reserve-boxes", async (req, res) => {
+  try {
+    const { boxes } = req.body;
+
+    if (!boxes || boxes.length === 0) {
+      return res.status(400).json({ error: "No boxes selected" });
+    }
+
+    // 🔥 atomic reserve
+    const { data, error } = await supabase
+      .from("grid_boxes")
+      .update({
+        status: "reserved",
+        reserved_at: new Date().toISOString(),
+      })
+      .in("box_number", boxes)
+      .eq("status", "available")
+      .select();
+
+    if (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Reserve failed" });
+    }
+
+    if (!data || data.length !== boxes.length) {
+      return res.status(400).json({
+        error: "Slots already taken. Try another.",
+      });
+    }
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Reserve failed" });
+  }
+});
+
+/* ================= CREATE ORDER ================= */
+
 app.post("/create-order", async (req, res) => {
-try {
-const { amount } = req.body;
+  try {
+    const { amount } = req.body;
 
+    if (!amount) {
+      return res.status(400).json({ error: "Amount required" });
+    }
 
-if (!amount) {
-  return res.status(400).json({ error: "Amount required" });
-}
+    const order = await razorpay.orders.create({
+      amount: amount * 100,
+      currency: "INR",
+      receipt: "order_" + Date.now(),
+    });
 
-const order = await razorpay.orders.create({
-  amount: amount * 100,
-  currency: "INR",
-  receipt: "order_" + Date.now(),
+    res.json(order);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Order failed" });
+  }
 });
 
-res.json(order);
+/* ================= VERIFY PAYMENT ================= */
 
+app.post("/verify-payment", async (req, res) => {
+  try {
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      boxes = [],
+      name = "Customer",
+      email = "test@example.com",
+      phone = "",
+    } = req.body;
 
-} catch (err) {
-console.error("Order error:", err);
-res.status(500).json({ error: "Order creation failed" });
-}
+    const body =
+      razorpay_order_id + "|" + razorpay_payment_id;
+
+    const expected = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(body)
+      .digest("hex");
+
+    if (expected !== razorpay_signature) {
+      return res.status(400).json({ error: "Invalid payment" });
+    }
+
+    // confirm reserved
+    for (const box of boxes) {
+      const { data } = await supabase
+        .from("grid_boxes")
+        .select("status")
+        .eq("box_number", box)
+        .limit(1);
+
+      if (!data || data.length === 0 || data[0].status !== "reserved") {
+        return res
+          .status(400)
+          .json({ error: "Slot lost during payment" });
+      }
+    }
+
+    // book permanently
+    for (const box of boxes) {
+      await supabase
+        .from("grid_boxes")
+        .update({
+          status: "booked",
+          booked_at: new Date().toISOString(),
+        })
+        .eq("box_number", box);
+    }
+
+    // save member
+    await supabase.from("members").insert(
+      boxes.map((box) => ({
+        box_number: box,
+        full_name: name,
+        mobile: phone,
+        email: email,
+        payment_id: razorpay_payment_id,
+        payment_status: "success",
+      }))
+    );
+
+    // email
+    try {
+      await resend.emails.send({
+        from: "Diya Soaps <onboarding@resend.dev>",
+        to: email,
+        subject: "Payment Successful 🎉",
+        html: `<h2>Thank you ${name}</h2><p>Your booking is confirmed.</p>`,
+      });
+    } catch {
+      console.log("Email skipped");
+    }
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Verification failed" });
+  }
 });
 
-// ================= CONTACT MAIL =================
-app.post("/send-contact-mail", async (req, res) => {
-try {
-const { name, email, phone, message } = req.body;
+/* ================= START ================= */
 
-
-if (!name || !email || !message) {
-  return res.status(400).json({
-    error: "Name, email and message required",
-  });
-}
-
-const { error } = await supabase
-  .from("contact_messages")
-  .insert([{ name, email, phone, message }]);
-
-if (error) throw error;
-
-await resend.emails.send({
-  from: "onboarding@resend.dev",
-  to: "diyasoapbusiness@gmail.com",
-  subject: "New Contact Message",
-  html: `
-    <h3>New Contact Message</h3>
-    <p><b>Name:</b> ${name}</p>
-    <p><b>Email:</b> ${email}</p>
-    <p><b>Phone:</b> ${phone || "N/A"}</p>
-    <p><b>Message:</b> ${message}</p>
-  `,
-});
-
-res.json({ success: true });
-
-
-} catch (err) {
-console.error("Contact error:", err);
-res.status(500).json({ error: "Contact failed" });
-}
-});
-
-// ================= RESERVE BOX =================
-app.post("/reserve-box", async (req, res) => {
-try {
-const boxNumber = parseInt(req.body.box_number, 10);
-
-
-if (!boxNumber) {
-  return res.status(400).json({ error: "Invalid box number" });
-}
-
-const { data: box, error } = await supabase
-  .from("grid_boxes")
-  .select("*")
-  .eq("box_number", boxNumber)
-  .single();
-
-if (error || !box || box.status !== "available") {
-  return res.status(400).json({ error: "Box unavailable" });
-}
-
-const { error: updateError } = await supabase
-  .from("grid_boxes")
-  .update({
-    status: "reserved",
-    reserved_at: new Date().toISOString(),
-  })
-  .eq("box_number", boxNumber);
-
-if (updateError) throw updateError;
-
-res.json({ success: true });
-
-
-} catch (err) {
-console.error("Reserve error:", err);
-res.status(500).json({ error: "Reserve failed" });
-}
-});
-
-// ================= ADMIN =================
-app.get("/admin/members", async (req, res) => {
-try {
-const { data, error } = await supabase
-.from("members")
-.select("*")
-.order("created_at", { ascending: false });
-
-
-if (error) throw error;
-
-res.json(data);
-
-
-} catch (err) {
-console.error("Admin error:", err);
-res.status(500).json({ error: "Admin fetch failed" });
-}
-});
-
-// ================= START =================
 const PORT = process.env.PORT || 5001;
 
 app.listen(PORT, () => {
-console.log(`🚀 Backend running on ${PORT}`);
+  console.log(`🚀 Backend running on ${PORT}`);
 });

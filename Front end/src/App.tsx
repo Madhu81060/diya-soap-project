@@ -31,7 +31,14 @@ import ShippingPolicy from "./pages/ShippingPolicy";
 import ContactPage from "./pages/ContactPage";
 
 function LandingPage() {
-  const [selectedBoxes, setSelectedBoxes] = useState<number[] | null>(null);
+
+  // ✅ Selected boxes for registration
+  const [selectedBoxes, setSelectedBoxes] =
+    useState<number[] | null>(null);
+
+  // ✅ NEW: Mode state (important fix)
+  const [mode, setMode] =
+    useState<"single" | "half" | "monthly">("single");
 
   useScrollReveal();
 
@@ -67,8 +74,7 @@ function LandingPage() {
     if (ref?.current) {
       const y =
         ref.current.getBoundingClientRect().top +
-        window.scrollY -
-        100;
+        window.scrollY - 100;
 
       window.scrollTo({ top: y, behavior: "smooth" });
     }
@@ -93,19 +99,32 @@ function LandingPage() {
         />
       </div>
 
-      {/* ✅ SHOP — FIXED */}
+      {/* ✅ SHOP (IMPORTANT FIX) */}
       <div id="shop" ref={shopRef} className="reveal">
         <ShopSection
-          onBuy={() => {
+          onBuy={(boxes) => {
+
+            // set mode based on selection
+            if (boxes === 1) setMode("single");
+            if (boxes === 2) setMode("half");
+            if (boxes === 4) setMode("monthly");
+
             handleNavigate("grid");
           }}
         />
       </div>
 
-      {/* GRID */}
+      {/* ✅ GRID (IMPORTANT FIX) */}
       <div id="grid" ref={gridRef} className="reveal">
         <GridSection
-          onBoxesSelected={(boxes) => setSelectedBoxes(boxes)}
+          mode={mode}
+          instruction={`Select ${
+            mode === "monthly" ? 4 :
+            mode === "half" ? 2 : 1
+          } boxes`}
+          onBoxesSelected={(boxes) =>
+            setSelectedBoxes(boxes)
+          }
         />
       </div>
 
@@ -129,9 +148,7 @@ function LandingPage() {
         <ContactSection />
       </div>
 
-      <div className="reveal">
-        <Footer />
-      </div>
+      <Footer />
 
       {/* Registration modal */}
       {selectedBoxes && (

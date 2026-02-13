@@ -1,6 +1,6 @@
 import LiveSeatCounter from "./LiveSeatCounter";
 import CountdownTimer from "./CountdownTimer";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabase, type GridBox } from "../lib/supabase";
 import { Loader2, Sparkles } from "lucide-react";
 
@@ -20,9 +20,11 @@ export default function GridSection({
 }: GridSectionProps) {
 
   const REQUIRED_BOXES =
-    mode === "monthly" ? 4 :
-    mode === "half" ? 2 :
-    1;
+    mode === "monthly"
+      ? 4
+      : mode === "half"
+      ? 2
+      : 1;
 
   const [boxes, setBoxes] = useState<GridBox[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,67 +32,125 @@ export default function GridSection({
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<number[]>([]);
 
-  // ===== FETCH GRID =====
-  const fetchBoxes = async () => {
-    try {
-      setLoading(true);
-      setErrorMsg("");
+  // ================= FETCH GRID (FIXED) =================
 
+  const fetchBoxes = useCallback(async () => {
+    try {
       const { data, error } = await supabase
         .from("grid_boxes")
         .select("*")
+        .lte("box_number", PHASE_ONE_LIMIT) // 🔥 IMPORTANT FIX
         .order("box_number", { ascending: true });
 
       if (error) throw error;
 
       setBoxes((data ?? []) as GridBox[]);
-    } catch (err: any) {
+      setErrorMsg("");
+
+    } catch (err) {
       console.error("Grid fetch error:", err);
-      setErrorMsg("Failed to load grid. Please refresh.");
+      setErrorMsg("Failed to load grid.");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchBoxes();
+  }, [fetchBoxes]);
+
+  // ================= REALTIME (FIXED SAFE) =================
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("grid-live")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "grid_boxes",
+        },
+        (payload) => {
+
+          // ignore boxes > 250
+          if (
+            payload.new.box_number >
+            PHASE_ONE_LIMIT
+          )
+            return;
+
+          setBoxes((prev) =>
+            prev.map((box) =>
+              box.box_number ===
+              payload.new.box_number
+                ? (payload.new as GridBox)
+                : box
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
+
+  // ================= RESET =================
 
   useEffect(() => {
     setSelected([]);
   }, [mode]);
 
-  const phaseOneBoxes = useMemo(
-    () => boxes.filter((b) => b.box_number <= PHASE_ONE_LIMIT),
-    [boxes]
-  );
+  // ================= PAGINATION =================
 
   const totalPages = Math.max(
     1,
-    Math.ceil(phaseOneBoxes.length / PAGE_SIZE)
+    Math.ceil(
+      boxes.length / PAGE_SIZE
+    )
   );
 
-  const pageData = phaseOneBoxes.slice(
+  const pageData = boxes.slice(
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE
   );
 
-  // ===== CLICK =====
-  const handleBoxClick = (boxNumber: number) => {
-    if (selected.includes(boxNumber)) return;
+  // ================= CLICK =================
 
-    const updated = [...selected, boxNumber];
+  const handleBoxClick = (
+    boxNumber: number
+  ) => {
+    if (selected.includes(boxNumber))
+      return;
+
+    const updated = [
+      ...selected,
+      boxNumber,
+    ];
+
     setSelected(updated);
 
-    if (updated.length === REQUIRED_BOXES) {
+    if (
+      updated.length ===
+      REQUIRED_BOXES
+    ) {
       onBoxesSelected(updated);
       setSelected([]);
     }
   };
 
-  // ===== COLORS =====
-  const getBoxColor = (box: GridBox) => {
-    if (selected.includes(box.box_number))
+  // ================= COLORS =================
+
+  const getBoxColor = (
+    box: GridBox
+  ) => {
+    if (
+      selected.includes(
+        box.box_number
+      )
+    )
       return "bg-yellow-500 text-white border-yellow-600 scale-105 shadow-md";
 
     if (box.status === "available")
@@ -105,11 +165,15 @@ export default function GridSection({
     return "bg-gray-100 border-gray-300";
   };
 
-  // ===== LOADING =====
+  // ================= LOADING =================
+
   if (loading) {
     return (
-      <div className="flex justify-center py-16 sm:py-20">
-        <Loader2 className="animate-spin text-yellow-600" size={40} />
+      <div className="flex justify-center py-16">
+        <Loader2
+          className="animate-spin text-yellow-600"
+          size={40}
+        />
       </div>
     );
   }
@@ -122,65 +186,87 @@ export default function GridSection({
     );
   }
 
-  // ✅🔥 THIS IS THE MAIN FIX
+  // ================= UI =================
+
   return (
     <section
       id="grid"
-      className="relative py-12 sm:py-20 bg-white overflow-hidden"
+      className="py-12 bg-white"
     >
-
-      <div className="absolute top-0 left-0 w-72 sm:w-96 h-72 sm:h-96 bg-yellow-300/40 rounded-full blur-3xl animate-pulse -z-10" />
-      <div className="absolute bottom-0 right-0 w-72 sm:w-96 h-72 sm:h-96 bg-amber-300/40 rounded-full blur-3xl animate-pulse -z-10" />
-
-      <div className="max-w-7xl mx-auto px-3 sm:px-4">
+      <div className="max-w-7xl mx-auto px-4">
 
         {instruction && (
-          <div className="mb-6 p-3 sm:p-4 rounded-xl bg-yellow-100 border border-yellow-300 text-center font-semibold shadow">
+          <div className="mb-6 p-4 rounded-xl bg-yellow-100 border border-yellow-300 text-center font-semibold">
             {instruction}
           </div>
         )}
 
-        <div className="mb-8 sm:mb-10 rounded-2xl sm:rounded-3xl p-5 sm:p-8 bg-gradient-to-r from-yellow-500 to-amber-500 text-white text-center shadow-2xl">
+        {/* HEADER */}
+        <div className="mb-8 rounded-3xl p-8 bg-gradient-to-r from-yellow-500 to-amber-500 text-white text-center shadow-xl">
           <div className="flex justify-center gap-2 mb-2">
-            <Sparkles className="animate-pulse" />
-            <h3 className="text-xl sm:text-2xl md:text-3xl font-extrabold">
-              Select {REQUIRED_BOXES} Box{REQUIRED_BOXES > 1 && "es"}
+            <Sparkles />
+            <h3 className="text-2xl font-extrabold">
+              Select {REQUIRED_BOXES} Box
+              {REQUIRED_BOXES > 1 &&
+                "es"}
             </h3>
-            <Sparkles className="animate-pulse" />
+            <Sparkles />
           </div>
 
           <p className="font-semibold">
-            Selected: {selected.length} / {REQUIRED_BOXES}
+            Selected: {selected.length} /{" "}
+            {REQUIRED_BOXES}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6">
+        {/* STATS */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <LiveSeatCounter />
           <CountdownTimer />
         </div>
 
-        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2 sm:gap-3">
+        {/* GRID */}
+        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-3">
+
           {pageData.map((box) => {
-            const disabled = box.status !== "available";
+            const disabled =
+              box.status !==
+              "available";
 
             return (
               <button
                 key={box.box_number}
                 disabled={disabled}
-                onClick={() => !disabled && handleBoxClick(box.box_number)}
-                className={`h-10 sm:h-11 md:h-12 rounded-lg border font-bold text-xs sm:text-sm transition ${getBoxColor(box)}`}
+                onClick={() =>
+                  !disabled &&
+                  handleBoxClick(
+                    box.box_number
+                  )
+                }
+                className={`h-11 rounded-lg border font-bold transition ${getBoxColor(
+                  box
+                )}`}
               >
-                {String(box.box_number).padStart(3, "0")}
+                {String(
+                  box.box_number
+                ).padStart(
+                  3,
+                  "0"
+                )}
               </button>
             );
           })}
         </div>
 
+        {/* PAGINATION */}
         <div className="flex justify-center gap-6 mt-8">
+
           <button
             disabled={page === 1}
-            onClick={() => setPage((p) => p - 1)}
-            className="px-5 py-2 bg-yellow-100 hover:bg-yellow-200 rounded-xl font-bold disabled:opacity-40"
+            onClick={() =>
+              setPage((p) => p - 1)
+            }
+            className="px-5 py-2 bg-yellow-100 rounded-xl font-bold disabled:opacity-40"
           >
             Prev
           </button>
@@ -190,14 +276,18 @@ export default function GridSection({
           </span>
 
           <button
-            disabled={page === totalPages}
-            onClick={() => setPage((p) => p + 1)}
-            className="px-5 py-2 bg-yellow-100 hover:bg-yellow-200 rounded-xl font-bold disabled:opacity-40"
+            disabled={
+              page === totalPages
+            }
+            onClick={() =>
+              setPage((p) => p + 1)
+            }
+            className="px-5 py-2 bg-yellow-100 rounded-xl font-bold disabled:opacity-40"
           >
             Next
           </button>
-        </div>
 
+        </div>
       </div>
     </section>
   );
