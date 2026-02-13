@@ -30,13 +30,10 @@ import RefundPolicy from "./pages/RefundPolicy";
 import ShippingPolicy from "./pages/ShippingPolicy";
 import ContactPage from "./pages/ContactPage";
 
-
 // ================= LANDING PAGE =================
 
 function LandingPage() {
   const [selectedBoxes, setSelectedBoxes] = useState<number[] | null>(null);
-  const [instruction, setInstruction] = useState("");
-  const [mode, setMode] = useState<"single" | "monthly">("single");
 
   useScrollReveal();
 
@@ -50,7 +47,7 @@ function LandingPage() {
 
   const navigate = useNavigate();
 
-  // ✅ Smooth scroll navigation (Navbar integration)
+  // ✅ Smooth scroll navigation
   const handleNavigate = (section: string) => {
     const refs: Record<string, React.RefObject<HTMLDivElement>> = {
       grid: gridRef,
@@ -73,7 +70,7 @@ function LandingPage() {
       const y =
         ref.current.getBoundingClientRect().top +
         window.scrollY -
-        100; // navbar offset
+        100;
 
       window.scrollTo({ top: y, behavior: "smooth" });
     }
@@ -82,7 +79,6 @@ function LandingPage() {
   return (
     <div className="min-h-screen bg-transparent">
 
-      {/* ✅ ORDER FIXED */}
       <Navbar onNavigate={handleNavigate} />
       <TopTrustBar />
 
@@ -99,16 +95,26 @@ function LandingPage() {
         />
       </div>
 
-      {/* SHOP */}
+      {/* SHOP — ✅ UPDATED */}
       <div id="shop" ref={shopRef} className="reveal">
-        <ShopSection setInstruction={setInstruction} setMode={setMode} />
+        <ShopSection
+          onBuy={(boxes) => {
+            handleNavigate("grid");
+
+            setTimeout(() => {
+              const selected = Array.from(
+                { length: boxes },
+                (_, i) => i + 1
+              );
+              setSelectedBoxes(selected);
+            }, 400);
+          }}
+        />
       </div>
 
       {/* GRID */}
       <div id="grid" ref={gridRef} className="reveal">
         <GridSection
-          mode={mode}
-          instruction={instruction}
           onBoxesSelected={(boxes) => setSelectedBoxes(boxes)}
         />
       </div>
@@ -165,7 +171,6 @@ function LandingPage() {
     </div>
   );
 }
-
 
 // ================= ROUTER =================
 

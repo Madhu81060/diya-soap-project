@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
-const TOTAL_MEMBERS = 250;
-const BACKEND_URL = "https://diya-backend.onrender.com";
+interface ShopProps {
+  onBuy: (boxes: number) => void;
+}
 
-const ShopSection = () => {
+const TOTAL_MEMBERS = 250;
+const BACKEND_URL = "https://diya-backenddiya-backend.onrender.com";
+
+const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
   const [members, setMembers] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -13,7 +17,6 @@ const ShopSection = () => {
       try {
         const res = await fetch(`${BACKEND_URL}/api/slots`);
         const data = await res.json();
-
         setMembers(data.booked || 0);
       } catch (err) {
         console.error("Backend error:", err);
@@ -33,7 +36,7 @@ const ShopSection = () => {
   return (
     <section id="grid" className="py-16 bg-gradient-to-b from-yellow-50 to-white">
 
-      {/* Title */}
+      {/* TITLE */}
       <div className="text-center mb-12 px-4">
         <h2 className="text-4xl font-bold text-amber-700">
           Shop & Rewards
@@ -46,7 +49,7 @@ const ShopSection = () => {
       {/* 3 BOX GRID */}
       <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-8 px-4">
 
-        {/* Box 1 */}
+        {/* SINGLE */}
         <div className="bg-white p-8 rounded-2xl shadow-lg border">
           <h3 className="text-2xl font-bold text-amber-700 mb-4">
             📦 Single Box
@@ -58,16 +61,17 @@ const ShopSection = () => {
             <li>✔ Skin Friendly Formula</li>
           </ul>
 
-          <p className="text-3xl font-bold text-amber-800 mt-6">
-            ₹600
-          </p>
+          <p className="text-3xl font-bold text-amber-800 mt-6">₹600</p>
 
-          <button className="w-full mt-4 bg-orange-600 text-white py-3 rounded-xl font-bold hover:bg-orange-700">
+          <button
+            onClick={() => onBuy(1)}
+            className="w-full mt-4 bg-orange-600 text-white py-3 rounded-xl font-bold"
+          >
             Buy 1 Box
           </button>
         </div>
 
-        {/* Box 2 */}
+        {/* HALF */}
         <div className="bg-white p-8 rounded-2xl shadow-lg border">
           <h3 className="text-2xl font-bold text-amber-700 mb-4">
             ⭐ Half Yearly Pack
@@ -75,20 +79,20 @@ const ShopSection = () => {
 
           <ul className="space-y-2 text-gray-700">
             <li>✔ 6 Soaps (2 Boxes)</li>
-            <li>✔ Family Saver Pack</li>
             <li>✔ Extra Lucky Draw Entry</li>
           </ul>
 
-          <p className="text-3xl font-bold text-amber-800 mt-6">
-            ₹900
-          </p>
+          <p className="text-3xl font-bold text-amber-800 mt-6">₹900</p>
 
-          <button className="w-full mt-4 bg-orange-600 text-white py-3 rounded-xl font-bold hover:bg-orange-700">
+          <button
+            onClick={() => onBuy(2)}
+            className="w-full mt-4 bg-orange-600 text-white py-3 rounded-xl font-bold"
+          >
             Buy Half Yearly
           </button>
         </div>
 
-        {/* Box 3 */}
+        {/* ANNUAL */}
         <div className="bg-yellow-400 p-8 rounded-2xl shadow-xl border relative">
 
           <span className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full text-sm font-bold">
@@ -101,27 +105,25 @@ const ShopSection = () => {
 
           <ul className="space-y-2">
             <li>✔ 12 Soaps (4 Boxes)</li>
-            <li>✔ Maximum Savings Pack</li>
-            <li>✔ Free Lucky Draw Entry</li>
+            <li>✔ Maximum Savings</li>
           </ul>
 
           <p className="mt-6">
-            <span className="line-through text-gray-700 mr-2">
-              ₹2400
-            </span>
-            <span className="text-3xl font-bold">
-              ₹1188
-            </span>
+            <span className="line-through mr-2">₹2400</span>
+            <span className="text-3xl font-bold">₹1188</span>
           </p>
 
-          <button className="w-full mt-4 bg-white text-black py-3 rounded-xl font-bold hover:bg-gray-100">
+          <button
+            onClick={() => onBuy(4)}
+            className="w-full mt-4 bg-white text-black py-3 rounded-xl font-bold"
+          >
             Buy Annual Pack
           </button>
         </div>
 
       </div>
 
-      {/* Lucky Draw Status */}
+      {/* LUCKY DRAW */}
       <div className="max-w-4xl mx-auto mt-16 bg-white p-8 rounded-3xl shadow-lg text-center">
 
         <h3 className="text-2xl font-bold text-amber-700 mb-4">
