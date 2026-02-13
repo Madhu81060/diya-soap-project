@@ -6,7 +6,9 @@ interface ShopProps {
 }
 
 const TOTAL_MEMBERS = 250;
-const BACKEND_URL = "https://diya-backenddiya-backend.onrender.com";
+
+// ✅ Correct backend URL
+const BACKEND_URL = "https://diya-backend.onrender.com";
 
 const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
   const [members, setMembers] = useState(0);
@@ -16,6 +18,9 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
     const fetchMembers = async () => {
       try {
         const res = await fetch(`${BACKEND_URL}/api/slots`);
+
+        if (!res.ok) throw new Error("Backend failed");
+
         const data = await res.json();
         setMembers(data.booked || 0);
       } catch (err) {
@@ -34,8 +39,8 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
     remainder === 0 ? TOTAL_MEMBERS : TOTAL_MEMBERS - remainder;
 
   return (
-    // ✅ IMPORTANT FIX HERE
-    <section id="shop" className="py-24 min-h-screen bg-gradient-to-b from-yellow-50 to-white">
+    // ✅ IMPORTANT: NO id="shop" here (App.tsx already has it)
+    <section className="py-24 min-h-screen bg-gradient-to-b from-yellow-50 to-white">
 
       {/* TITLE */}
       <div className="text-center mb-12 px-4">
@@ -50,6 +55,7 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
       {/* 3 BOX GRID */}
       <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-8 px-4">
 
+        {/* SINGLE */}
         <div className="bg-white p-8 rounded-2xl shadow-lg border">
           <h3 className="text-2xl font-bold text-amber-700 mb-4">
             📦 Single Box
@@ -65,12 +71,13 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
 
           <button
             onClick={() => onBuy(1)}
-            className="w-full mt-4 bg-orange-600 text-white py-3 rounded-xl font-bold"
+            className="w-full mt-4 bg-orange-600 text-white py-3 rounded-xl font-bold hover:bg-orange-700"
           >
             Buy 1 Box
           </button>
         </div>
 
+        {/* HALF */}
         <div className="bg-white p-8 rounded-2xl shadow-lg border">
           <h3 className="text-2xl font-bold text-amber-700 mb-4">
             ⭐ Half Yearly Pack
@@ -85,12 +92,13 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
 
           <button
             onClick={() => onBuy(2)}
-            className="w-full mt-4 bg-orange-600 text-white py-3 rounded-xl font-bold"
+            className="w-full mt-4 bg-orange-600 text-white py-3 rounded-xl font-bold hover:bg-orange-700"
           >
             Buy Half Yearly
           </button>
         </div>
 
+        {/* ANNUAL */}
         <div className="bg-yellow-400 p-8 rounded-2xl shadow-xl border relative">
 
           <span className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full text-sm font-bold">
@@ -113,7 +121,7 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
 
           <button
             onClick={() => onBuy(4)}
-            className="w-full mt-4 bg-white text-black py-3 rounded-xl font-bold"
+            className="w-full mt-4 bg-white text-black py-3 rounded-xl font-bold hover:bg-gray-100"
           >
             Buy Annual Pack
           </button>
