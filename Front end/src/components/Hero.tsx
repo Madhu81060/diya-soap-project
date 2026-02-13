@@ -1,132 +1,139 @@
-import { useEffect, useState } from "react";
-import heroSoap from "../assets/diya-soap.png";
-import cowImg from "../assets/cow.png";
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 
-export default function HeroSection() {
-  const TOTAL_SLOTS = 250;
+interface ShopProps {
+  setInstruction: (msg: string) => void;
+  setMode: (mode: "single" | "half" | "monthly") => void;
+}
 
-  // ✅ FIXED backend URL
-  const BACKEND_URL = "https://diya-backend.onrender.com";
+const TOTAL_MEMBERS = 250;
 
-  const [booked, setBooked] = useState(0);
+// ✅ Correct backend URL
+const BACKEND_URL =
+  "https://diya-backenddiya-backend.onrender.com";
+
+const ShopSection: React.FC<ShopProps> = ({
+  setInstruction,
+  setMode,
+}) => {
+  const [members, setMembers] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const fetchSlots = async () => {
+    const fetchMembers = async () => {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/slots`);
+        const res = await fetch(
+          `${BACKEND_URL}/api/slots`
+        );
 
-        if (!res.ok) throw new Error("Fetch failed");
+        if (!res.ok)
+          throw new Error(
+            `HTTP error! status: ${res.status}`
+          );
 
         const data = await res.json();
 
-        console.log("Backend response:", data);
+        console.log(
+          "Backend response:",
+          data
+        );
 
-        // ✅ backend returns { booked: number }
-        setBooked(data.booked || 0);
-
+        // ✅ Safe handling
+        setMembers(
+          typeof data?.booked === "number"
+            ? data.booked
+            : 0
+        );
       } catch (err) {
-        console.error("Backend error:", err);
-        setBooked(0);
+        console.error(
+          "Backend error:",
+          err
+        );
+        setMembers(0);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchSlots();
+    fetchMembers();
   }, []);
 
-  const available = TOTAL_SLOTS - booked;
-  const progress = (booked / TOTAL_SLOTS) * 100;
+  const remainder =
+    members % TOTAL_MEMBERS;
+
+  const nextDraw =
+    remainder === 0
+      ? TOTAL_MEMBERS
+      : TOTAL_MEMBERS - remainder;
+
+  const fadeUp = {
+    hidden: { opacity: 0, y: 40 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.6 },
+    },
+  };
 
   return (
-    <section id="home" className="bg-[#fffaf3]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 lg:py-10">
+    <section className="py-12 sm:py-16 bg-gradient-to-b from-yellow-50 via-amber-50 to-white">
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 items-center">
+      <motion.div
+        initial="hidden"
+        whileInView="visible"
+        variants={fadeUp}
+        viewport={{ once: true }}
+        className="text-center mb-12 px-4"
+      >
+        <h2 className="text-3xl sm:text-4xl font-bold text-amber-700">
+          Shop & Rewards
+        </h2>
 
-          <div className="space-y-4">
+        <p className="text-gray-600 mt-2">
+          Premium Natural Soaps +
+          Gold Lucky Draw Offers
+        </p>
+      </motion.div>
 
-            <span className="inline-block px-4 py-2 rounded-full bg-gradient-to-r from-[#fde6c8] to-[#f8d39c] text-[#8b4513] font-semibold text-xs sm:text-sm border border-[#f3c98b]">
-              🌿 Ayurvedic • Natural • Premium Care
-            </span>
+      <div className="max-w-5xl mx-auto mt-14 bg-white border border-yellow-200 rounded-3xl p-8 text-center shadow-lg mx-4">
 
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#7a2e12] leading-tight">
-              Red Sandal Soap for
-              <span className="block text-[#9a3412]">
-                Naturally Glowing Skin
-              </span>
-            </h1>
+        <h3 className="text-2xl font-bold mb-4 text-amber-700">
+          🎁 Gold Lucky Draw Offer
+        </h3>
 
-            <p className="text-base sm:text-lg text-gray-700 max-w-xl">
-              Crafted with ancient Ayurvedic red sandalwood —
-              gentle on skin, powerful in results.
-            </p>
+        <p className="text-lg mb-2 text-gray-700">
+          Every <b>250 members</b> →
+          1 Winner gets{" "}
+          <b>1g Gold Coin</b>
+        </p>
 
-            <div className="bg-white rounded-xl p-4 border border-[#f3c98b] shadow-sm max-w-xl">
+        <motion.div
+          animate={{
+            scale: [1, 1.03, 1],
+          }}
+          transition={{
+            repeat: Infinity,
+            duration: 2,
+          }}
+          className="bg-yellow-50 p-5 rounded-xl shadow-inner"
+        >
+          <p className="text-xl font-bold text-amber-700">
+            👥 Members Joined:{" "}
+            {loading
+              ? "Loading..."
+              : members}
+          </p>
 
-              <p className="font-semibold text-gray-900 text-sm sm:text-base">
-                Live Slots Status ({TOTAL_SLOTS})
-              </p>
+          <p className="mt-2 text-lg text-gray-700">
+            ⏳ Next Draw in{" "}
+            <b>{nextDraw}</b> members
+          </p>
+        </motion.div>
 
-              <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                Available: <b>{available}</b> · Booked: <b>{booked}</b>
-              </p>
-
-              <div className="mt-3 h-2 w-full bg-[#fde6c8] rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-[#e6a756] to-[#d97706]"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-
-              <p className="text-xs text-[#a16207] mt-2">
-                ⏳ Limited slots. Booking closes once full.
-              </p>
-
-            </div>
-
-            <a
-              href="#grid"
-              className="inline-block px-7 py-3 rounded-full bg-gradient-to-r from-[#d97706] to-[#b45309] text-white font-bold shadow-lg hover:scale-105 transition text-sm sm:text-base"
-            >
-              Book Your Soaps Box ₹600
-            </a>
-
-          </div>
-
-          <div className="flex justify-center lg:justify-end">
-
-            <div className="relative w-full max-w-md lg:max-w-xl">
-
-              <img
-                src={heroSoap}
-                alt="Diya Red Sandal Soap"
-                className="w-full h-auto rounded-2xl shadow-xl border border-[#f1c27d] object-cover"
-              />
-
-              <div className="absolute top-2 right-2 bg-white border border-green-300 rounded-lg shadow-md px-2 py-1.5 flex items-center gap-2">
-
-                <img
-                  src={cowImg}
-                  alt="Goshala Cow"
-                  className="w-7 h-7 object-contain"
-                />
-
-                <div className="leading-tight">
-                  <p className="text-[11px] font-bold text-green-900">
-                    10% to Goshala
-                  </p>
-                  <p className="text-[10px] text-green-700">
-                    Cow Support
-                  </p>
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
       </div>
+
     </section>
   );
-}
+};
+
+export default ShopSection;
