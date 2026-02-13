@@ -18,14 +18,13 @@ export default function RegistrationModal({
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [paymentSuccess, setPaymentSuccess] =
-    useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [orderId, setOrderId] = useState("");
 
-  // ✅ PRICE
+  // ✅ PRICE (🔥 single box = ₹1)
   const totalPrice =
     selectedBoxes.length === 1
-      ? 600
+      ? 1
       : selectedBoxes.length === 2
       ? 900
       : 1188;
@@ -41,7 +40,7 @@ export default function RegistrationModal({
     agreeTerms: false,
   });
 
-  // ✅ Load Razorpay
+  // ✅ Load Razorpay script
   useEffect(() => {
     if ((window as any).Razorpay) return;
 
@@ -54,9 +53,7 @@ export default function RegistrationModal({
 
   // ================= REGISTER =================
 
-  const handleSubmit = async (
-    e: React.FormEvent
-  ) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.agreeTerms) {
@@ -74,8 +71,7 @@ export default function RegistrationModal({
         {
           method: "POST",
           headers: {
-            "Content-Type":
-              "application/json",
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             boxes: selectedBoxes,
@@ -98,7 +94,7 @@ export default function RegistrationModal({
       setOrderId(newOrderId);
       onSuccess(newOrderId);
 
-      await startPayment(newOrderId);
+      await startPayment();
 
     } catch (err) {
       console.error(err);
@@ -109,17 +105,14 @@ export default function RegistrationModal({
 
   // ================= PAYMENT =================
 
-  const startPayment = async (
-    newOrderId: string
-  ) => {
+  const startPayment = async () => {
     try {
       const res = await fetch(
         `${API_BASE}/create-order`,
         {
           method: "POST",
           headers: {
-            "Content-Type":
-              "application/json",
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             amount: totalPrice,
@@ -130,19 +123,16 @@ export default function RegistrationModal({
       if (!res.ok)
         throw new Error("Order failed");
 
-      const order =
-        await res.json();
+      const order = await res.json();
 
       const options = {
-        key: "rzp_live_SEoqwulgqrAXys",
+        key: "rzp_live_SEoqwulgqrAXys", // ✅ LIVE key
         amount: order.amount,
         currency: "INR",
         order_id: order.id,
         name: "Diya Soaps",
 
-        handler: async (
-          response: any
-        ) => {
+        handler: async (response: any) => {
           try {
             const verify =
               await fetch(
@@ -155,14 +145,10 @@ export default function RegistrationModal({
                   },
                   body: JSON.stringify({
                     ...response,
-                    boxes:
-                      selectedBoxes,
-                    name:
-                      formData.fullName,
-                    email:
-                      formData.email,
-                    phone:
-                      formData.mobile,
+                    boxes: selectedBoxes,
+                    name: formData.fullName,
+                    email: formData.email,
+                    phone: formData.mobile,
                   }),
                 }
               );
@@ -219,9 +205,7 @@ export default function RegistrationModal({
   if (paymentSuccess) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-[99999]">
-
         <div className="bg-white p-10 rounded-3xl text-center max-w-md shadow-2xl">
-
           <CheckCircle
             size={70}
             className="mx-auto text-green-500 mb-4 animate-bounce"
@@ -231,20 +215,12 @@ export default function RegistrationModal({
             Registration Successful 🎉
           </h2>
 
-          <p className="mb-2">
-            Your booking is confirmed!
-          </p>
+          <p>Your booking is confirmed!</p>
 
           <p className="font-semibold">
             Order ID: {orderId}
           </p>
-
-          <p className="text-gray-600 mt-2">
-            Confirmation email sent.
-          </p>
-
         </div>
-
       </div>
     );
   }

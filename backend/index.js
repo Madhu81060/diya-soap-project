@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
-import { Resend } from "resend";
+import { Resend } from "resend"; // ✅ FIXED
 
 dotenv.config();
 
@@ -43,18 +43,22 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 /* ================= AUTO CLEAN RESERVED ================= */
 
 setInterval(async () => {
-  const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
+  try {
+    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
 
-  await supabase
-    .from("grid_boxes")
-    .update({
-      status: "available",
-      reserved_at: null,
-    })
-    .eq("status", "reserved")
-    .lt("reserved_at", fiveMinAgo.toISOString());
+    await supabase
+      .from("grid_boxes")
+      .update({
+        status: "available",
+        reserved_at: null,
+      })
+      .eq("status", "reserved")
+      .lt("reserved_at", fiveMinAgo.toISOString());
 
-  console.log("🧹 Cleaned old reserved slots");
+    console.log("🧹 Cleaned old reserved slots");
+  } catch (err) {
+    console.error("Cleanup error:", err);
+  }
 }, 60000);
 
 /* ================= HEALTH ================= */
@@ -66,15 +70,22 @@ app.get("/", (req, res) => {
 /* ================= SLOT COUNT ================= */
 
 app.get("/api/slots", async (req, res) => {
-  const { count } = await supabase
-    .from("grid_boxes")
-    .select("*", { count: "exact", head: true })
-    .eq("status", "booked");
+  try {
+    const { count, error } = await supabase
+      .from("grid_boxes")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "booked");
 
-  res.json({ booked: count || 0 });
+    if (error) throw error;
+
+    res.json({ booked: count || 0 });
+  } catch (err) {
+    console.error("Slots error:", err);
+    res.status(500).json({ booked: 0 });
+  }
 });
 
-/* ================= RESERVE BOXES (FIXED ATOMIC) ================= */
+/* ================= RESERVE BOXES ================= */
 
 app.post("/reserve-boxes", async (req, res) => {
   try {
@@ -84,7 +95,6 @@ app.post("/reserve-boxes", async (req, res) => {
       return res.status(400).json({ error: "No boxes selected" });
     }
 
-    // 🔥 atomic reserve
     const { data, error } = await supabase
       .from("grid_boxes")
       .update({
@@ -95,10 +105,7 @@ app.post("/reserve-boxes", async (req, res) => {
       .eq("status", "available")
       .select();
 
-    if (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Reserve failed" });
-    }
+    if (error) throw error;
 
     if (!data || data.length !== boxes.length) {
       return res.status(400).json({
@@ -109,7 +116,7 @@ app.post("/reserve-boxes", async (req, res) => {
     res.json({ success: true });
 
   } catch (err) {
-    console.error(err);
+    console.error("Reserve error:", err);
     res.status(500).json({ error: "Reserve failed" });
   }
 });
@@ -133,7 +140,7 @@ app.post("/create-order", async (req, res) => {
     res.json(order);
 
   } catch (err) {
-    console.error(err);
+    console.error("Create order error:", err);
     res.status(500).json({ error: "Order failed" });
   }
 });
@@ -142,18 +149,19 @@ app.post("/create-order", async (req, res) => {
 
 app.post("/verify-payment", async (req, res) => {
   try {
+    console.log("🔥 verify-payment called");
+
     const {
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature,
       boxes = [],
-      name = "Customer",
-      email = "test@example.com",
-      phone = "",
+      name,
+      email,
+      phone,
     } = req.body;
 
-    const body =
-      razorpay_order_id + "|" + razorpay_payment_id;
+    const body = razorpay_order_id + "|" + razorpay_payment_id;
 
     const expected = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
@@ -172,10 +180,10 @@ app.post("/verify-payment", async (req, res) => {
         .eq("box_number", box)
         .limit(1);
 
-      if (!data || data.length === 0 || data[0].status !== "reserved") {
-        return res
-          .status(400)
-          .json({ error: "Slot lost during payment" });
+      if (!data || data[0].status !== "reserved") {
+        return res.status(400).json({
+          error: "Slot lost during payment",
+        });
       }
     }
 
@@ -202,22 +210,26 @@ app.post("/verify-payment", async (req, res) => {
       }))
     );
 
-    // email
+    // email send
     try {
+      console.log("📧 Sending email to:", email);
+
       await resend.emails.send({
         from: "Diya Soaps <onboarding@resend.dev>",
         to: email,
         subject: "Payment Successful 🎉",
         html: `<h2>Thank you ${name}</h2><p>Your booking is confirmed.</p>`,
       });
-    } catch {
-      console.log("Email skipped");
+
+      console.log("✅ Email sent");
+    } catch (mailErr) {
+      console.error("❌ Email error:", mailErr);
     }
 
     res.json({ success: true });
 
   } catch (err) {
-    console.error(err);
+    console.error("Verify error:", err);
     res.status(500).json({ error: "Verification failed" });
   }
 });
