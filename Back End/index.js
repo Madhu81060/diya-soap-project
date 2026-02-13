@@ -1,8 +1,8 @@
 import express from "express";
 import dotenv from "dotenv";
-import nodemailer from "nodemailer";
 import Razorpay from "razorpay";
 import { createClient } from "@supabase/supabase-js";
+import { Resend } from "resend";
 
 dotenv.config();
 
@@ -12,206 +12,195 @@ app.set("trust proxy", 1);
 
 // ================= CORS =================
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header(
-    "Access-Control-Allow-Methods",
-    "GET, POST, PUT, DELETE, OPTIONS"
-  );
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization"
-  );
+res.header("Access-Control-Allow-Origin", "*");
+res.header(
+"Access-Control-Allow-Methods",
+"GET, POST, PUT, DELETE, OPTIONS"
+);
+res.header(
+"Access-Control-Allow-Headers",
+"Content-Type, Authorization"
+);
 
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
-  }
+if (req.method === "OPTIONS") {
+return res.sendStatus(200);
+}
 
-  next();
+next();
 });
 
 app.use(express.json());
 
 // ================= SUPABASE =================
 const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+process.env.SUPABASE_URL,
+process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 // ================= RAZORPAY =================
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
+key_id: process.env.RAZORPAY_KEY_ID,
+key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-// ================= MAIL =================
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+// ================= RESEND =================
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ================= HEALTH CHECK =================
 app.get("/", (req, res) => {
-  res.send("Backend running ✅");
+res.send("Backend running ✅");
 });
 
-// =====================================================
-// 🔥 SLOTS API (FINAL FIX)
-// =====================================================
+// ================= SLOTS =================
 app.get("/api/slots", async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from("grid_boxes")
-      .select("status");
+try {
+const { data, error } = await supabase
+.from("grid_boxes")
+.select("status");
 
-    if (error) throw error;
 
-    // ✅ count both reserved + booked
-    const booked = data.filter(
-      (b) =>
-        b.status === "reserved" ||
-        b.status === "booked"
-    ).length;
+if (error) throw error;
 
-    res.json({ booked });
+const booked = data.filter(
+  (b) => b.status === "reserved" || b.status === "booked"
+).length;
 
-  } catch (err) {
-    console.error("Slots error:", err);
-    res.status(500).json({ error: "Slots fetch failed" });
-  }
+res.json({ booked });
+
+
+} catch (err) {
+console.error("Slots error:", err);
+res.status(500).json({ error: "Slots fetch failed" });
+}
 });
 
-// =====================================================
-// 💳 CREATE ORDER
-// =====================================================
+// ================= CREATE ORDER =================
 app.post("/create-order", async (req, res) => {
-  try {
-    const { amount } = req.body;
+try {
+const { amount } = req.body;
 
-    if (!amount) {
-      return res.status(400).json({ error: "Amount required" });
-    }
 
-    const order = await razorpay.orders.create({
-      amount: amount * 100,
-      currency: "INR",
-      receipt: "order_" + Date.now(),
-    });
+if (!amount) {
+  return res.status(400).json({ error: "Amount required" });
+}
 
-    res.json(order);
-
-  } catch (err) {
-    console.error("Order error:", err);
-    res.status(500).json({ error: "Order creation failed" });
-  }
+const order = await razorpay.orders.create({
+  amount: amount * 100,
+  currency: "INR",
+  receipt: "order_" + Date.now(),
 });
 
-// =====================================================
-// 📩 CONTACT MAIL (FINAL FIX)
-// =====================================================
+res.json(order);
+
+
+} catch (err) {
+console.error("Order error:", err);
+res.status(500).json({ error: "Order creation failed" });
+}
+});
+
+// ================= CONTACT MAIL =================
 app.post("/send-contact-mail", async (req, res) => {
-  try {
-    const { name, email, phone, message } = req.body;
+try {
+const { name, email, phone, message } = req.body;
 
-    if (!name || !email || !message) {
-      return res.status(400).json({
-        error: "Name, email and message required",
-      });
-    }
 
-    // Save to Supabase
-    const { error } = await supabase
-      .from("contact_messages")
-      .insert([{ name, email, phone, message }]);
+if (!name || !email || !message) {
+  return res.status(400).json({
+    error: "Name, email and message required",
+  });
+}
 
-    if (error) throw error;
+const { error } = await supabase
+  .from("contact_messages")
+  .insert([{ name, email, phone, message }]);
 
-    // Send email
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: process.env.EMAIL_USER,
-      subject: "New Contact Message",
-      html: `
-        <h3>New Contact Message</h3>
-        <p><b>Name:</b> ${name}</p>
-        <p><b>Email:</b> ${email}</p>
-        <p><b>Phone:</b> ${phone || "N/A"}</p>
-        <p><b>Message:</b> ${message}</p>
-      `,
-    });
+if (error) throw error;
 
-    res.json({ success: true });
-
-  } catch (err) {
-    console.error("Contact error:", err);
-    res.status(500).json({ error: "Contact failed" });
-  }
+await resend.emails.send({
+  from: "onboarding@resend.dev",
+  to: "diyasoapbusiness@gmail.com",
+  subject: "New Contact Message",
+  html: `
+    <h3>New Contact Message</h3>
+    <p><b>Name:</b> ${name}</p>
+    <p><b>Email:</b> ${email}</p>
+    <p><b>Phone:</b> ${phone || "N/A"}</p>
+    <p><b>Message:</b> ${message}</p>
+  `,
 });
 
-// =====================================================
-// 📦 RESERVE BOX
-// =====================================================
+res.json({ success: true });
+
+
+} catch (err) {
+console.error("Contact error:", err);
+res.status(500).json({ error: "Contact failed" });
+}
+});
+
+// ================= RESERVE BOX =================
 app.post("/reserve-box", async (req, res) => {
-  try {
-    const boxNumber = parseInt(req.body.box_number, 10);
+try {
+const boxNumber = parseInt(req.body.box_number, 10);
 
-    if (!boxNumber) {
-      return res.status(400).json({ error: "Invalid box number" });
-    }
 
-    const { data: box, error } = await supabase
-      .from("grid_boxes")
-      .select("*")
-      .eq("box_number", boxNumber)
-      .single();
+if (!boxNumber) {
+  return res.status(400).json({ error: "Invalid box number" });
+}
 
-    if (error || !box || box.status !== "available") {
-      return res.status(400).json({ error: "Box unavailable" });
-    }
+const { data: box, error } = await supabase
+  .from("grid_boxes")
+  .select("*")
+  .eq("box_number", boxNumber)
+  .single();
 
-    const { error: updateError } = await supabase
-      .from("grid_boxes")
-      .update({
-        status: "reserved",
-        reserved_at: new Date().toISOString(),
-      })
-      .eq("box_number", boxNumber);
+if (error || !box || box.status !== "available") {
+  return res.status(400).json({ error: "Box unavailable" });
+}
 
-    if (updateError) throw updateError;
+const { error: updateError } = await supabase
+  .from("grid_boxes")
+  .update({
+    status: "reserved",
+    reserved_at: new Date().toISOString(),
+  })
+  .eq("box_number", boxNumber);
 
-    res.json({ success: true });
+if (updateError) throw updateError;
 
-  } catch (err) {
-    console.error("Reserve error:", err);
-    res.status(500).json({ error: "Reserve failed" });
-  }
+res.json({ success: true });
+
+
+} catch (err) {
+console.error("Reserve error:", err);
+res.status(500).json({ error: "Reserve failed" });
+}
 });
 
-// =====================================================
-// 🔒 ADMIN MEMBERS
-// =====================================================
+// ================= ADMIN =================
 app.get("/admin/members", async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from("members")
-      .select("*")
-      .order("created_at", { ascending: false });
+try {
+const { data, error } = await supabase
+.from("members")
+.select("*")
+.order("created_at", { ascending: false });
 
-    if (error) throw error;
 
-    res.json(data);
+if (error) throw error;
 
-  } catch (err) {
-    console.error("Admin error:", err);
-    res.status(500).json({ error: "Admin fetch failed" });
-  }
+res.json(data);
+
+
+} catch (err) {
+console.error("Admin error:", err);
+res.status(500).json({ error: "Admin fetch failed" });
+}
 });
 
-// ================= START SERVER =================
+// ================= START =================
 const PORT = process.env.PORT || 5001;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Backend running on ${PORT}`);
+console.log(`🚀 Backend running on ${PORT}`);
 });
