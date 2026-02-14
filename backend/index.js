@@ -40,6 +40,34 @@ app.get("/", (req, res) => {
   res.json({ message: "Backend running ✅" });
 });
 
+/* ================= CONTACT MAIL ================= */
+
+app.post("/send-contact-mail", async (req, res) => {
+  try {
+    const { name, email, phone, message } = req.body;
+
+    const result = await resend.emails.send({
+      from: "Diya Soaps <support@diyasoaps.com>",
+      to: "diyasoapbusiness@gmail.com",
+      subject: "📩 New Contact Message",
+      html: `
+        <h2>New Contact Enquiry</h2>
+        <p><b>Name:</b> ${name}</p>
+        <p><b>Email:</b> ${email}</p>
+        <p><b>Phone:</b> ${phone}</p>
+        <p><b>Message:</b><br/>${message}</p>
+      `,
+    });
+
+    console.log("Contact mail result:", result);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Contact mail error:", err);
+    res.status(500).json({ error: "Failed to send message" });
+  }
+});
+
 /* ================= RESERVE ================= */
 
 app.post("/reserve-boxes", async (req, res) => {
@@ -152,38 +180,34 @@ app.post("/verify-payment", async (req, res) => {
     /* ================= CUSTOMER EMAIL ================= */
 
     try {
-      await resend.emails.send({
-        from: "Diya Soaps <support@diyasoaps.com>",   // 👈 Professional sender
+      const result = await resend.emails.send({
+        from: "Diya Soaps <support@diyasoaps.com>",
         to: email,
         subject: `🌿 Payment Successful | Order ${orderId}`,
         html: `
           <h2 style="color:#16a34a;">Payment Confirmed 🌿</h2>
           <p>Dear ${name},</p>
           <p>Thank you for visiting DiyaSoap.com.</p>
-
           <p><b>Order ID:</b> ${orderId}</p>
           <p><b>Payment ID:</b> ${razorpay_payment_id}</p>
           <p><b>Amount Paid:</b> ₹${amountPaid}</p>
           <p><b>Slots:</b> ${boxes.join(", ")}</p>
           <p><b>Date:</b> ${now}</p>
-
-          <p>🎁 You are eligible for Lucky Draw & Special Offers!</p>
-
           <br/>
           <p>Regards,<br/>Team Diya Soaps</p>
         `,
       });
 
-      console.log("✅ Customer email sent");
+      console.log("Customer email result:", result);
 
     } catch (err) {
-      console.log("❌ Customer email failed:", err);
+      console.error("Customer email error:", err);
     }
 
     /* ================= OWNER EMAIL ================= */
 
     try {
-      await resend.emails.send({
+      const result = await resend.emails.send({
         from: "Diya Soaps <support@diyasoaps.com>",
         to: "diyasoapbusiness@gmail.com",
         subject: `🔔 New Booking | Order ${orderId}`,
@@ -200,10 +224,10 @@ app.post("/verify-payment", async (req, res) => {
         `,
       });
 
-      console.log("✅ Owner email sent");
+      console.log("Owner email result:", result);
 
     } catch (err) {
-      console.log("❌ Owner email failed:", err);
+      console.error("Owner email error:", err);
     }
 
     res.json({ success: true });
