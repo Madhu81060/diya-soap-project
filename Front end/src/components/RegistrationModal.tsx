@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { X, Loader2, CheckCircle } from "lucide-react";
 
-const API_BASE =
-  "https://diya-backenddiya-backend.onrender.com";
+const API_BASE = (
+  "https://diya-backenddiya-backend.onrender.com"
+).trim();
 
 interface RegistrationModalProps {
   selectedBoxes: number[];
@@ -15,13 +16,11 @@ export default function RegistrationModal({
   onClose,
   onSuccess,
 }: RegistrationModalProps) {
-
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [orderId, setOrderId] = useState("");
 
-  // ✅ PRICE
   const totalPrice =
     selectedBoxes.length === 1
       ? 1
@@ -40,7 +39,8 @@ export default function RegistrationModal({
     agreeTerms: false,
   });
 
-  // ✅ Load Razorpay script once
+  /* ================= LOAD RAZORPAY ================= */
+
   useEffect(() => {
     if ((window as any).Razorpay) return;
 
@@ -50,33 +50,45 @@ export default function RegistrationModal({
     document.body.appendChild(script);
   }, []);
 
-  // ================= REGISTER =================
+  /* ================= FORM VALIDATION ================= */
+
+  const validateForm = () => {
+    if (
+      !formData.fullName.trim() ||
+      !formData.email.trim() ||
+      !formData.mobile.trim()
+    ) {
+      setErrorMsg("Please fill all required fields");
+      return false;
+    }
+
+    if (!formData.agreeTerms) {
+      setErrorMsg("Please accept terms & conditions");
+      return false;
+    }
+
+    return true;
+  };
+
+  /* ================= REGISTER ================= */
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!formData.agreeTerms) {
-      setErrorMsg("Please accept terms");
-      return;
-    }
-
-    setLoading(true);
     setErrorMsg("");
 
+    if (!validateForm()) return;
+
+    setLoading(true);
+
     try {
-      const reserve = await fetch(
-        `${API_BASE}/reserve-boxes`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            boxes: selectedBoxes,
-          }),
-        }
-      );
+      const reserve = await fetch(`${API_BASE}/reserve-boxes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ boxes: selectedBoxes }),
+      });
 
       if (!reserve.ok) {
-        setErrorMsg("Slots already taken. Try another.");
+        setErrorMsg("Selected slots are already booked.");
         setLoading(false);
         return;
       }
@@ -88,30 +100,24 @@ export default function RegistrationModal({
       onSuccess(newOrderId);
 
       await startPayment(newOrderId);
-
     } catch (err) {
       console.error(err);
-      setErrorMsg("Registration failed");
+      setErrorMsg("Registration failed. Please try again.");
       setLoading(false);
     }
   };
 
-  // ================= PAYMENT =================
+  /* ================= PAYMENT ================= */
 
   const startPayment = async (newOrderId: string) => {
     try {
-      const res = await fetch(
-        `${API_BASE}/create-order`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            amount: totalPrice,
-          }),
-        }
-      );
+      const res = await fetch(`${API_BASE}/create-order`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: totalPrice }),
+      });
 
-      if (!res.ok) throw new Error("Order failed");
+      if (!res.ok) throw new Error("Order creation failed");
 
       const order = await res.json();
 
@@ -121,6 +127,17 @@ export default function RegistrationModal({
         currency: "INR",
         order_id: order.id,
         name: "Diya Soaps",
+        description: "Lucky Draw Slot Booking",
+
+        prefill: {
+          name: formData.fullName,
+          email: formData.email,
+          contact: formData.mobile,
+        },
+
+        theme: {
+          color: "#d97706",
+        },
 
         handler: async (response: any) => {
           try {
@@ -137,13 +154,13 @@ export default function RegistrationModal({
                   name: formData.fullName,
                   email: formData.email,
                   phone: formData.mobile,
-                  orderId: newOrderId, // ✅ VERY IMPORTANT
+                  orderId: newOrderId,
                 }),
               }
             );
 
             if (!verify.ok) {
-              setErrorMsg("Payment verification failed");
+              setErrorMsg("Payment verification failed.");
               setLoading(false);
               return;
             }
@@ -153,18 +170,17 @@ export default function RegistrationModal({
 
             setTimeout(() => {
               onClose();
-            }, 4000);
-
+            }, 5000);
           } catch (err) {
             console.error(err);
-            setErrorMsg("Verification failed");
+            setErrorMsg("Verification failed.");
             setLoading(false);
           }
         },
 
         modal: {
           ondismiss: () => {
-            setErrorMsg("Payment cancelled");
+            setErrorMsg("Payment cancelled.");
             setLoading(false);
           },
         },
@@ -172,15 +188,14 @@ export default function RegistrationModal({
 
       const rzp = new (window as any).Razorpay(options);
       rzp.open();
-
     } catch (err) {
       console.error(err);
-      setErrorMsg("Payment failed");
+      setErrorMsg("Payment failed. Try again.");
       setLoading(false);
     }
   };
 
-  // ================= SUCCESS SCREEN =================
+  /* ================= SUCCESS SCREEN ================= */
 
   if (paymentSuccess) {
     return (
@@ -195,17 +210,23 @@ export default function RegistrationModal({
             Registration Successful 🎉
           </h2>
 
-          <p>Your booking is confirmed!</p>
+          <p className="mb-2">
+            Your booking has been confirmed.
+          </p>
 
-          <p className="font-semibold">
+          <p className="font-semibold text-lg">
             Order ID: {orderId}
+          </p>
+
+          <p className="mt-3 text-sm text-gray-500">
+            Confirmation email has been sent.
           </p>
         </div>
       </div>
     );
   }
 
-  // ================= UI =================
+  /* ================= UI ================= */
 
   return (
     <div className="fixed inset-0 flex items-center justify-center p-4 bg-black/60 z-[99999]">
@@ -253,7 +274,7 @@ export default function RegistrationModal({
                   [field]: e.target.value,
                 })
               }
-              className="w-full px-4 py-3 border rounded-lg"
+              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none"
             />
           ))}
 
@@ -279,12 +300,12 @@ export default function RegistrationModal({
 
           <button
             disabled={loading}
-            className="w-full bg-amber-600 text-white py-4 rounded-lg font-bold flex justify-center gap-2"
+            className="w-full bg-amber-600 text-white py-4 rounded-lg font-bold flex justify-center gap-2 hover:bg-amber-700 transition"
           >
             {loading ? (
               <>
                 <Loader2 className="animate-spin" />
-                Processing…
+                Processing...
               </>
             ) : (
               "Register & Pay"

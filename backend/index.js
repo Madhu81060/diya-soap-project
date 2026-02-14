@@ -186,32 +186,49 @@ app.post("/verify-payment", async (req, res) => {
       }))
     );
 
-    /* ================= CUSTOMER EMAIL ================= */
+    /* ================= PROFESSIONAL CUSTOMER EMAIL ================= */
 
     await resend.emails.send({
       from: "Diya Soaps <onboarding@resend.dev>",
       to: email,
-      subject: "🎉 Booking Confirmed - Diya Soap",
+      subject: "Your Booking is Confirmed | Diya Soaps 🌿",
       html: `
-        <div style="font-family:Arial;padding:20px">
-          <h2 style="color:#16a34a;">Thank You for Visiting DiyaSoap.com 🌿</h2>
-          <p>Hi <b>${name}</b>,</p>
-          <p>Your booking is successfully confirmed.</p>
+      <div style="font-family:Arial,Helvetica,sans-serif;background:#f9fafb;padding:30px;">
+        <div style="max-width:600px;margin:auto;background:white;padding:30px;border-radius:12px;box-shadow:0 5px 20px rgba(0,0,0,0.08);">
+          
+          <h2 style="color:#16a34a;margin-bottom:10px;">Booking Confirmation 🎉</h2>
 
-          <p><b>Order ID:</b> ${orderId}</p>
-          <p><b>Slot(s):</b> ${boxes.join(", ")}</p>
+          <p>Dear <strong>${name}</strong>,</p>
 
-          <hr/>
+          <p>Thank you for choosing <strong>Diya Soaps</strong>. 
+          We are delighted to confirm your booking.</p>
 
-          <h3>🎁 Exclusive Offers:</h3>
+          <div style="background:#f0fdf4;padding:15px;border-radius:8px;margin:20px 0;">
+            <p><strong>Order ID:</strong> ${orderId}</p>
+            <p><strong>Booked Slot(s):</strong> ${boxes.join(", ")}</p>
+            <p><strong>Payment ID:</strong> ${razorpay_payment_id}</p>
+          </div>
+
+          <h3 style="margin-top:20px;color:#ea580c;">🎁 Exclusive Benefits</h3>
           <ul>
-            <li>5% discount on next purchase</li>
-            <li>Gold Drop Lucky Draw access</li>
-            <li>Festival special bonuses</li>
+            <li>Lucky Draw Entry</li>
+            <li>Festival Special Offers</li>
+            <li>Priority Access to Upcoming Products</li>
           </ul>
 
-          <p>Regards,<br/><b>Team Diya Soap</b></p>
+          <p style="margin-top:25px;">
+            If you have any questions, feel free to reply to this email.
+          </p>
+
+          <hr style="margin:25px 0;" />
+
+          <p style="font-size:14px;color:#555;">
+            Warm Regards,<br/>
+            <strong>Team Diya Soaps</strong><br/>
+            Hyderabad, India
+          </p>
         </div>
+      </div>
       `,
     });
 
@@ -236,38 +253,6 @@ app.post("/verify-payment", async (req, res) => {
   } catch (err) {
     console.error("Verify error:", err);
     res.status(500).json({ error: "Verification failed" });
-  }
-});
-
-/* ================= CONTACT MAIL ================= */
-
-app.post("/send-contact-mail", async (req, res) => {
-  try {
-    const { name, email, phone, message } = req.body;
-
-    if (!name || !email || !message) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
-
-    await resend.emails.send({
-      from: "Diya Soaps <onboarding@resend.dev>",
-      to: "diyasoapbusiness@gmail.com",
-      reply_to: email,
-      subject: "New Contact Message",
-      html: `
-        <h2>New Contact Message</h2>
-        <p><b>Name:</b> ${name}</p>
-        <p><b>Email:</b> ${email}</p>
-        <p><b>Phone:</b> ${phone || "N/A"}</p>
-        <p>${message}</p>
-      `,
-    });
-
-    res.json({ success: true });
-
-  } catch (err) {
-    console.error("Contact mail error:", err);
-    res.status(500).json({ error: "Failed to send message" });
   }
 });
 
