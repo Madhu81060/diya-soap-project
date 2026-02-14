@@ -237,6 +237,25 @@ app.post("/verify-payment", async (req, res) => {
   }
 });
 
+/* ================= GET MEMBERS (ADMIN) ================= */
+
+app.get("/members", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("members")
+      .select("*")
+      .order("id", { ascending: false });
+
+    if (error) {
+      return res.status(500).json({ error: "Failed to fetch members" });
+    }
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 /* ================= START ================= */
 
 const PORT = process.env.PORT || 10000;
