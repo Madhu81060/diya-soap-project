@@ -21,7 +21,7 @@ export default function RegistrationModal({
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [orderId, setOrderId] = useState("");
 
-  // ✅ PRICE (🔥 single box = 1)
+  // ✅ PRICE
   const totalPrice =
     selectedBoxes.length === 1
       ? 1
@@ -40,13 +40,12 @@ export default function RegistrationModal({
     agreeTerms: false,
   });
 
-  // ✅ Load Razorpay script
+  // ✅ Load Razorpay script once
   useEffect(() => {
     if ((window as any).Razorpay) return;
 
     const script = document.createElement("script");
-    script.src =
-      "https://checkout.razorpay.com/v1/checkout.js";
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
     script.async = true;
     document.body.appendChild(script);
   }, []);
@@ -65,14 +64,11 @@ export default function RegistrationModal({
     setErrorMsg("");
 
     try {
-      // Reserve slots
       const reserve = await fetch(
         `${API_BASE}/reserve-boxes`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             boxes: selectedBoxes,
           }),
@@ -80,21 +76,18 @@ export default function RegistrationModal({
       );
 
       if (!reserve.ok) {
-        setErrorMsg(
-          "Slots already taken. Try another."
-        );
+        setErrorMsg("Slots already taken. Try another.");
         setLoading(false);
         return;
       }
 
       const newOrderId =
-        "DSP" +
-        Date.now().toString().slice(-8);
+        "DSP" + Date.now().toString().slice(-8);
 
       setOrderId(newOrderId);
       onSuccess(newOrderId);
 
-      await startPayment();
+      await startPayment(newOrderId);
 
     } catch (err) {
       console.error(err);
@@ -105,28 +98,25 @@ export default function RegistrationModal({
 
   // ================= PAYMENT =================
 
-  const startPayment = async () => {
+  const startPayment = async (newOrderId: string) => {
     try {
       const res = await fetch(
         `${API_BASE}/create-order`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             amount: totalPrice,
           }),
         }
       );
 
-      if (!res.ok)
-        throw new Error("Order failed");
+      if (!res.ok) throw new Error("Order failed");
 
       const order = await res.json();
 
       const options = {
-        key: "rzp_live_SEoqwulgqrAXys", // ✅ LIVE key
+        key: "rzp_live_SEoqwulgqrAXys",
         amount: order.amount,
         currency: "INR",
         order_id: order.id,
@@ -134,29 +124,26 @@ export default function RegistrationModal({
 
         handler: async (response: any) => {
           try {
-            const verify =
-              await fetch(
-                `${API_BASE}/verify-payment`,
-                {
-                  method: "POST",
-                  headers: {
-                    "Content-Type":
-                      "application/json",
-                  },
-                  body: JSON.stringify({
-                    ...response,
-                    boxes: selectedBoxes,
-                    name: formData.fullName,
-                    email: formData.email,
-                    phone: formData.mobile,
-                  }),
-                }
-              );
+            const verify = await fetch(
+              `${API_BASE}/verify-payment`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  ...response,
+                  boxes: selectedBoxes,
+                  name: formData.fullName,
+                  email: formData.email,
+                  phone: formData.mobile,
+                  orderId: newOrderId, // ✅ VERY IMPORTANT
+                }),
+              }
+            );
 
             if (!verify.ok) {
-              setErrorMsg(
-                "Payment verification failed"
-              );
+              setErrorMsg("Payment verification failed");
               setLoading(false);
               return;
             }
@@ -170,27 +157,20 @@ export default function RegistrationModal({
 
           } catch (err) {
             console.error(err);
-            setErrorMsg(
-              "Verification failed"
-            );
+            setErrorMsg("Verification failed");
             setLoading(false);
           }
         },
 
         modal: {
           ondismiss: () => {
-            setErrorMsg(
-              "Payment cancelled"
-            );
+            setErrorMsg("Payment cancelled");
             setLoading(false);
           },
         },
       };
 
-      const rzp =
-        new (window as any)
-          .Razorpay(options);
-
+      const rzp = new (window as any).Razorpay(options);
       rzp.open();
 
     } catch (err) {
@@ -229,7 +209,6 @@ export default function RegistrationModal({
 
   return (
     <div className="fixed inset-0 flex items-center justify-center p-4 bg-black/60 z-[99999]">
-
       <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
 
         <div className="border-b px-6 py-4 flex justify-between items-center">
@@ -241,20 +220,11 @@ export default function RegistrationModal({
           </button>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="p-6 space-y-4"
-        >
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
 
           <div className="bg-blue-50 border p-3 rounded-lg text-center">
-            <p className="font-semibold">
-              Selected Boxes:
-            </p>
-
-            <p>
-              {selectedBoxes.join(", ")}
-            </p>
-
+            <p className="font-semibold">Selected Boxes:</p>
+            <p>{selectedBoxes.join(", ")}</p>
             <p className="mt-2 font-bold text-lg">
               Total: ₹{totalPrice}
             </p>
@@ -272,22 +242,15 @@ export default function RegistrationModal({
             <input
               key={field}
               required
-              type={
-                field === "email"
-                  ? "email"
-                  : "text"
-              }
+              type={field === "email" ? "email" : "text"}
               placeholder={field}
               value={
-                formData[
-                  field as keyof typeof formData
-                ] as string
+                formData[field as keyof typeof formData] as string
               }
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  [field]:
-                    e.target.value,
+                  [field]: e.target.value,
                 })
               }
               className="w-full px-4 py-3 border rounded-lg"
@@ -297,14 +260,11 @@ export default function RegistrationModal({
           <label className="flex gap-2 text-sm">
             <input
               type="checkbox"
-              checked={
-                formData.agreeTerms
-              }
+              checked={formData.agreeTerms}
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  agreeTerms:
-                    e.target.checked,
+                  agreeTerms: e.target.checked,
                 })
               }
             />
@@ -332,7 +292,6 @@ export default function RegistrationModal({
           </button>
 
         </form>
-
       </div>
     </div>
   );
