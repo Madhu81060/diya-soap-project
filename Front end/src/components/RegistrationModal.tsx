@@ -21,10 +21,10 @@ export default function RegistrationModal({
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [orderId, setOrderId] = useState("");
 
-  // ✅ Only change here
+  // ✅ Only change here (1 removed → 600 added)
   const totalPrice =
     selectedBoxes.length === 1
-      ? 600   // 🔥 Changed from 1 to 600
+      ? 600
       : selectedBoxes.length === 2
       ? 900
       : 1188;

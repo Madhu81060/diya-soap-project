@@ -46,7 +46,7 @@ app.post("/send-contact-mail", async (req, res) => {
   try {
     const { name, email, phone, message } = req.body;
 
-    const result = await resend.emails.send({
+    await resend.emails.send({
       from: "Diya Soaps <support@diyasoaps.com>",
       to: "diyasoapbusiness@gmail.com",
       subject: "📩 New Contact Message",
@@ -58,8 +58,6 @@ app.post("/send-contact-mail", async (req, res) => {
         <p><b>Message:</b><br/>${message}</p>
       `,
     });
-
-    console.log("Contact mail result:", result);
 
     res.json({ success: true });
   } catch (err) {
@@ -103,7 +101,21 @@ app.post("/reserve-boxes", async (req, res) => {
 
 app.post("/create-order", async (req, res) => {
   try {
-    const { amount } = req.body;
+    const { boxes } = req.body;
+
+    if (!boxes || boxes.length === 0) {
+      return res.status(400).json({ error: "No boxes selected" });
+    }
+
+    let amount;
+
+    if (boxes.length === 1) {
+      amount = 600;
+    } else if (boxes.length === 2) {
+      amount = 900;
+    } else {
+      amount = 1188;
+    }
 
     const order = await razorpay.orders.create({
       amount: amount * 100,
@@ -168,15 +180,14 @@ app.post("/verify-payment", async (req, res) => {
       payment_status: "success",
     });
 
-    /* ===== UPDATED AMOUNT LOGIC ===== */
-
     const amountPaid =
-      boxes.length === 1 ? 600 :
-      boxes.length === 2 ? 900 : 1188;
+      boxes.length === 1
+        ? 600
+        : boxes.length === 2
+        ? 900
+        : 1188;
 
     const now = new Date().toLocaleString("en-IN");
-
-    /* ================= CUSTOMER EMAIL ================= */
 
     try {
       await resend.emails.send({
@@ -186,21 +197,16 @@ app.post("/verify-payment", async (req, res) => {
         html: `
           <h2 style="color:#16a34a;">Payment Confirmed 🌿</h2>
           <p>Dear ${name},</p>
-          <p>Thank you for visiting DiyaSoap.com.</p>
           <p><b>Order ID:</b> ${orderId}</p>
           <p><b>Payment ID:</b> ${razorpay_payment_id}</p>
           <p><b>Amount Paid:</b> ₹${amountPaid}</p>
           <p><b>Slots:</b> ${boxes.join(", ")}</p>
           <p><b>Date:</b> ${now}</p>
-          <br/>
-          <p>Regards,<br/>Team Diya Soaps</p>
         `,
       });
     } catch (err) {
       console.error("Customer email error:", err);
     }
-
-    /* ================= OWNER EMAIL ================= */
 
     try {
       await resend.emails.send({
