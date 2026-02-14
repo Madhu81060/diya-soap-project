@@ -18,11 +18,9 @@ export default function AdminPanel() {
     }
   }, []);
 
-  // ================= LOGOUT (NO POPUP) =================
+  // ================= LOGOUT =================
   const logout = () => {
     adminAuth.logout();
-
-    // professional message redirect
     window.location.href = "/admin-login?logout=1";
   };
 
@@ -31,7 +29,7 @@ export default function AdminPanel() {
     try {
       setLoading(true);
 
-      const res = await fetch(`${BACKEND_URL}/admin/members`);
+      const res = await fetch(`${BACKEND_URL}/members`);
 
       if (!res.ok) {
         setMessage("❌ Failed to fetch members");
@@ -42,13 +40,14 @@ export default function AdminPanel() {
       const data = await res.json();
       setMembers(data);
       setLoading(false);
-    } catch {
+
+    } catch (err) {
       setMessage("❌ Server error");
       setLoading(false);
     }
   };
 
-  // ================= REALTIME UPDATE =================
+  // ================= REALTIME =================
   useEffect(() => {
     fetchMembers();
 
@@ -61,37 +60,22 @@ export default function AdminPanel() {
       )
       .subscribe();
 
-    return () => supabase.removeChannel(channel);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
-
-  // ================= UPDATE SHIPMENT =================
-  const updateShipmentStatus = async (
-    memberId: string,
-    status: string
-  ) => {
-    await fetch(`${BACKEND_URL}/admin/update-shipment`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ memberId, status }),
-    });
-
-    setMessage("✅ Shipment updated");
-    fetchMembers();
-
-    setTimeout(() => setMessage(null), 3000);
-  };
 
   // ================= EXPORT CSV =================
   const exportToCSV = () => {
     const csv = [
-      ["Box", "Name", "Mobile", "City", "Payment", "Shipment"],
+      ["Order ID","Box","Name","Mobile","City","Payment"],
       ...members.map((m) => [
+        m.order_id,
         m.box_number,
         m.full_name,
         m.mobile,
         m.city,
         m.payment_status,
-        m.shipment_status,
       ]),
     ]
       .map((r) => r.join(","))
@@ -106,7 +90,6 @@ export default function AdminPanel() {
     a.click();
   };
 
-  // ================= LOADING =================
   if (loading) {
     return (
       <div className="p-10 text-center font-bold text-xl">
@@ -118,14 +101,12 @@ export default function AdminPanel() {
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
 
-      {/* SUCCESS / ERROR MESSAGE */}
       {message && (
         <div className="mb-6 bg-green-100 border border-green-400 text-green-800 px-6 py-3 rounded-lg font-bold text-center">
           {message}
         </div>
       )}
 
-      {/* HEADER */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-extrabold">🛠️ Admin Panel</h1>
 
@@ -143,8 +124,7 @@ export default function AdminPanel() {
         </div>
       </div>
 
-      {/* ACTION BUTTONS */}
-      <div className="flex flex-wrap gap-4 mb-8">
+      <div className="mb-6">
         <button
           onClick={exportToCSV}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700"
@@ -153,40 +133,29 @@ export default function AdminPanel() {
         </button>
       </div>
 
-      {/* MEMBERS TABLE */}
       <div className="overflow-x-auto">
         <table className="w-full bg-white border rounded-lg">
           <thead className="bg-gray-200">
             <tr>
+              <th className="p-2">Order ID</th>
               <th className="p-2">Box</th>
               <th className="p-2">Name</th>
               <th className="p-2">Mobile</th>
+              <th className="p-2">City</th>
               <th className="p-2">Payment</th>
-              <th className="p-2">Shipment</th>
             </tr>
           </thead>
 
           <tbody>
             {members.map((m) => (
               <tr key={m.id} className="border-t hover:bg-gray-50">
+                <td className="p-2">{m.order_id}</td>
                 <td className="p-2">{m.box_number}</td>
                 <td className="p-2">{m.full_name}</td>
                 <td className="p-2">{m.mobile}</td>
-                <td className="p-2 font-bold">{m.payment_status}</td>
-
-                <td className="p-2">
-                  <select
-                    className="border rounded px-2 py-1"
-                    value={m.shipment_status}
-                    onChange={(e) =>
-                      updateShipmentStatus(m.id, e.target.value)
-                    }
-                  >
-                    <option>pending</option>
-                    <option>processing</option>
-                    <option>shipped</option>
-                    <option>delivered</option>
-                  </select>
+                <td className="p-2">{m.city}</td>
+                <td className="p-2 font-bold text-green-600">
+                  {m.payment_status}
                 </td>
               </tr>
             ))}

@@ -15,7 +15,6 @@ app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type");
-
   if (req.method === "OPTIONS") return res.sendStatus(200);
   next();
 });
@@ -40,7 +39,31 @@ app.get("/", (req, res) => {
   res.json({ message: "Backend running ✅" });
 });
 
-/* ================= GET ALL SLOTS ================= */
+/* ================= AUTO RELEASE RESERVED (5 MIN) ================= */
+
+const releaseExpiredReservations = async () => {
+  try {
+    const fiveMinutesAgo = new Date(
+      Date.now() - 5 * 60 * 1000
+    ).toISOString();
+
+    await supabase
+      .from("grid_boxes")
+      .update({
+        status: "available",
+        reserved_at: null,
+      })
+      .eq("status", "reserved")
+      .lt("reserved_at", fiveMinutesAgo);
+
+  } catch (err) {
+    console.error("Auto release error:", err);
+  }
+};
+
+setInterval(releaseExpiredReservations, 60000);
+
+/* ================= GET SLOTS ================= */
 
 app.get("/api/slots", async (req, res) => {
   try {
@@ -49,19 +72,15 @@ app.get("/api/slots", async (req, res) => {
       .select("*")
       .order("box_number", { ascending: true });
 
-    if (error) {
-      console.error("Slots fetch error:", error);
-      return res.status(500).json({ error: error.message });
-    }
+    if (error) throw error;
 
     res.json(data);
-  } catch (err) {
-    console.error("Slots API error:", err);
+  } catch {
     res.status(500).json({ error: "Failed to fetch slots" });
   }
 });
 
-/* ================= CONTACT MAIL ================= */
+/* ================= CONTACT FORM ================= */
 
 app.post("/send-contact-mail", async (req, res) => {
   try {
@@ -76,14 +95,13 @@ app.post("/send-contact-mail", async (req, res) => {
         <p><b>Name:</b> ${name}</p>
         <p><b>Email:</b> ${email}</p>
         <p><b>Phone:</b> ${phone}</p>
-        <p><b>Message:</b><br/>${message}</p>
+        <p><b>Message:</b> ${message}</p>
       `,
     });
 
     res.json({ success: true });
-  } catch (err) {
-    console.error("Contact mail error:", err);
-    res.status(500).json({ error: "Failed to send message" });
+  } catch {
+    res.status(500).json({ error: "Mail failed" });
   }
 });
 
@@ -92,10 +110,6 @@ app.post("/send-contact-mail", async (req, res) => {
 app.post("/reserve-boxes", async (req, res) => {
   try {
     const { boxes } = req.body;
-
-    if (!boxes || boxes.length === 0) {
-      return res.status(400).json({ error: "No boxes selected" });
-    }
 
     const { data } = await supabase
       .from("grid_boxes")
@@ -112,8 +126,7 @@ app.post("/reserve-boxes", async (req, res) => {
     }
 
     res.json({ success: true });
-  } catch (err) {
-    console.error("Reserve error:", err);
+  } catch {
     res.status(500).json({ error: "Reserve failed" });
   }
 });
@@ -124,19 +137,14 @@ app.post("/create-order", async (req, res) => {
   try {
     const { boxes } = req.body;
 
-    if (!boxes || boxes.length === 0) {
+    if (!boxes?.length)
       return res.status(400).json({ error: "No boxes selected" });
-    }
 
-    let amount;
-
-    if (boxes.length === 1) {
-      amount = 600;
-    } else if (boxes.length === 2) {
-      amount = 900;
-    } else {
-      amount = 1188;
-    }
+    let amount =
+      boxes.length === 1 ? 600 :
+      boxes.length === 2 ? 900 :
+      boxes.length === 4 ? 1188 :
+      boxes.length * 600;
 
     const order = await razorpay.orders.create({
       amount: amount * 100,
@@ -145,8 +153,7 @@ app.post("/create-order", async (req, res) => {
     });
 
     res.json(order);
-  } catch (err) {
-    console.error("Order error:", err);
+  } catch {
     res.status(500).json({ error: "Order failed" });
   }
 });
@@ -163,12 +170,12 @@ app.post("/verify-payment", async (req, res) => {
       name,
       email,
       phone,
+      house_no,
+      street,
+      city,
+      pincode,
       orderId,
     } = req.body;
-
-    if (!boxes || boxes.length === 0) {
-      return res.status(400).json({ error: "No boxes provided" });
-    }
 
     const body = razorpay_order_id + "|" + razorpay_payment_id;
 
@@ -177,10 +184,10 @@ app.post("/verify-payment", async (req, res) => {
       .update(body)
       .digest("hex");
 
-    if (expected !== razorpay_signature) {
+    if (expected !== razorpay_signature)
       return res.status(400).json({ error: "Invalid payment" });
-    }
 
+    /* Update Slots */
     for (const box of boxes) {
       await supabase
         .from("grid_boxes")
@@ -191,72 +198,65 @@ app.post("/verify-payment", async (req, res) => {
         .eq("box_number", box);
     }
 
+    let amountPaid =
+      boxes.length === 1 ? 600 :
+      boxes.length === 2 ? 900 :
+      boxes.length === 4 ? 1188 :
+      boxes.length * 600;
+
+    /* Save Member */
     await supabase.from("members").insert({
+      order_id: orderId,
       box_number: boxes.join(", "),
       full_name: name,
+      email,
       mobile: phone,
-      email: email,
+      house_no,
+      street,
+      city,
+      pincode,
+      amount_paid: amountPaid,
       payment_id: razorpay_payment_id,
-      order_id: orderId,
       payment_status: "success",
+      created_at: new Date().toISOString(),
     });
 
-    const amountPaid =
-      boxes.length === 1
-        ? 600
-        : boxes.length === 2
-        ? 900
-        : 1188;
-
-    const now = new Date().toLocaleString("en-IN");
-
     /* Customer Email */
-    try {
-      await resend.emails.send({
-        from: "Diya Soaps <support@diyasoaps.com>",
-        to: email,
-        subject: `🌿 Payment Successful | Order ${orderId}`,
-        html: `
-          <h2>Payment Confirmed</h2>
-          <p>Dear ${name},</p>
-          <p><b>Order ID:</b> ${orderId}</p>
-          <p><b>Amount:</b> ₹${amountPaid}</p>
-          <p><b>Slots:</b> ${boxes.join(", ")}</p>
-          <p><b>Date:</b> ${now}</p>
-        `,
-      });
-    } catch (err) {
-      console.error("Customer email error:", err);
-    }
+    await resend.emails.send({
+      from: "Diya Soaps <support@diyasoaps.com>",
+      to: email,
+      subject: `🎉 Booking Confirmed | ${orderId}`,
+      html: `
+        <h2>Booking Confirmed 🌿</h2>
+        <p>Dear ${name},</p>
+        <p><b>Order ID:</b> ${orderId}</p>
+        <p><b>Amount:</b> ₹${amountPaid}</p>
+        <p><b>Slots:</b> ${boxes.join(", ")}</p>
+        <p><b>Address:</b> ${house_no}, ${street}, ${city} - ${pincode}</p>
+      `,
+    });
 
     /* Owner Email */
-    try {
-      await resend.emails.send({
-        from: "Diya Soaps <support@diyasoaps.com>",
-        to: "diyasoapbusiness@gmail.com",
-        subject: `🔔 New Booking | ${orderId}`,
-        html: `
-          <h2>New Booking</h2>
-          <p>Name: ${name}</p>
-          <p>Email: ${email}</p>
-          <p>Phone: ${phone}</p>
-          <p>Amount: ₹${amountPaid}</p>
-          <p>Slots: ${boxes.join(", ")}</p>
-        `,
-      });
-    } catch (err) {
-      console.error("Owner email error:", err);
-    }
+    await resend.emails.send({
+      from: "Diya Soaps <support@diyasoaps.com>",
+      to: "diyasoapbusiness@gmail.com",
+      subject: `🔔 New Booking | ${orderId}`,
+      html: `
+        <h2>New Booking</h2>
+        <p>Name: ${name}</p>
+        <p>Phone: ${phone}</p>
+        <p>Slots: ${boxes.join(", ")}</p>
+      `,
+    });
 
     res.json({ success: true });
 
-  } catch (err) {
-    console.error("Verify error:", err);
+  } catch {
     res.status(500).json({ error: "Verification failed" });
   }
 });
 
-/* ================= GET MEMBERS ================= */
+/* ================= ADMIN MEMBERS ================= */
 
 app.get("/members", async (req, res) => {
   try {
@@ -265,13 +265,11 @@ app.get("/members", async (req, res) => {
       .select("*")
       .order("id", { ascending: false });
 
-    if (error) {
-      return res.status(500).json({ error: "Failed to fetch members" });
-    }
+    if (error) throw error;
 
     res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: "Server error" });
+  } catch {
+    res.status(500).json({ error: "Failed to fetch members" });
   }
 });
 
@@ -280,5 +278,5 @@ app.get("/members", async (req, res) => {
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Backend running on ${PORT}`);
+  console.log("🚀 Server running on port", PORT);
 });
