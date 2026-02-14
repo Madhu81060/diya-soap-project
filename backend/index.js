@@ -11,6 +11,7 @@ const app = express();
 app.use(express.json());
 
 /* ================= CORS ================= */
+
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -63,7 +64,7 @@ app.post("/send-contact-mail", async (req, res) => {
     const { name, email, phone, message } = req.body;
 
     if (!name || !email || !message) {
-      return res.status(400).json({ error: "Missing fields" });
+      return res.status(400).json({ error: "Missing required fields" });
     }
 
     await resend.emails.send({
@@ -183,7 +184,7 @@ app.post("/verify-payment", async (req, res) => {
         .eq("box_number", box);
     }
 
-    /* Calculate Amount */
+    /* Calculate amount */
     const amountPaid =
       boxes.length === 1
         ? 1
@@ -202,21 +203,23 @@ app.post("/verify-payment", async (req, res) => {
       payment_status: "success",
     });
 
+    const now = new Date().toLocaleString("en-IN");
+
     /* ================= CUSTOMER EMAIL ================= */
 
     await resend.emails.send({
       from: "Diya Soaps <onboarding@resend.dev>",
       to: email,
-      subject: `Payment Successful | Order ${orderId} | Diya Soaps`,
+      subject: `🌿 Payment Successful | Order ${orderId}`,
       html: `
-      <div style="font-family:Arial;background:#f4f4f4;padding:40px;">
-        <div style="max-width:650px;margin:auto;background:#ffffff;padding:30px;border-radius:10px;">
+      <div style="font-family:Arial;background:#f4f6f8;padding:40px;">
+        <div style="max-width:650px;margin:auto;background:#ffffff;padding:35px;border-radius:12px;">
           
           <h2 style="color:#16a34a;">Thank You for Visiting DiyaSoap.com 🌿</h2>
 
           <p>Dear <strong>${name}</strong>,</p>
 
-          <p>Your payment has been successfully received and your booking is confirmed.</p>
+          <p>Your payment has been successfully received. We are happy to confirm your booking.</p>
 
           <hr/>
 
@@ -225,24 +228,26 @@ app.post("/verify-payment", async (req, res) => {
           <p><strong>Payment ID:</strong> ${razorpay_payment_id}</p>
           <p><strong>Amount Paid:</strong> ₹${amountPaid}</p>
           <p><strong>Booked Slot(s):</strong> ${boxes.join(", ")}</p>
-          <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
+          <p><strong>Date:</strong> ${now}</p>
 
           <hr/>
 
           <h3>🎁 Exclusive Benefits</h3>
           <ul>
             <li>Lucky Draw Entry</li>
-            <li>Festival Offers</li>
-            <li>Special Discounts</li>
+            <li>Festival Special Offers</li>
+            <li>Member Only Discounts</li>
           </ul>
 
-          <p>We truly appreciate your trust in Diya Soaps.</p>
+          <p style="margin-top:25px;">
+            We truly appreciate your trust in Diya Soaps.
+          </p>
 
           <p style="margin-top:30px;">
             Regards,<br/>
-            <strong>Team Diya Soaps</strong>
+            <strong>Team Diya Soaps</strong><br/>
+            Hyderabad, India
           </p>
-
         </div>
       </div>
       `,
@@ -253,9 +258,9 @@ app.post("/verify-payment", async (req, res) => {
     await resend.emails.send({
       from: "Diya Soaps <onboarding@resend.dev>",
       to: "diyasoapbusiness@gmail.com",
-      subject: `🔔 New Booking | Order ${orderId}`,
+      subject: `🔔 New Booking Received | Order ${orderId}`,
       html: `
-        <h2>New Booking Received</h2>
+        <h2>New Booking Alert</h2>
         <p><b>Name:</b> ${name}</p>
         <p><b>Email:</b> ${email}</p>
         <p><b>Phone:</b> ${phone}</p>
@@ -263,7 +268,7 @@ app.post("/verify-payment", async (req, res) => {
         <p><b>Payment ID:</b> ${razorpay_payment_id}</p>
         <p><b>Amount:</b> ₹${amountPaid}</p>
         <p><b>Slots:</b> ${boxes.join(", ")}</p>
-        <p><b>Time:</b> ${new Date().toLocaleString()}</p>
+        <p><b>Time:</b> ${now}</p>
       `,
     });
 
