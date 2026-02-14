@@ -21,7 +21,7 @@ export default function RegistrationModal({
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [orderId, setOrderId] = useState("");
 
-  // ✅ PRICE (🔥 single box = ₹1)
+  // ✅ PRICE (🔥 single box = 1)
   const totalPrice =
     selectedBoxes.length === 1
       ? 1

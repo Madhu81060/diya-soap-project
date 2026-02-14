@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
-import { Resend } from "resend"; // ✅ FIXED
+import { Resend } from "resend";
 
 dotenv.config();
 
@@ -18,7 +18,9 @@ app.use((req, res, next) => {
   res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === "OPTIONS") return res.sendStatus(200);
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
   next();
 });
 
@@ -36,7 +38,7 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-/* ================= EMAIL ================= */
+/* ================= RESEND ================= */
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -64,7 +66,7 @@ setInterval(async () => {
 /* ================= HEALTH ================= */
 
 app.get("/", (req, res) => {
-  res.send("Backend running ✅");
+  res.json({ message: "Backend running ✅" });
 });
 
 /* ================= SLOT COUNT ================= */
@@ -149,8 +151,6 @@ app.post("/create-order", async (req, res) => {
 
 app.post("/verify-payment", async (req, res) => {
   try {
-    console.log("🔥 verify-payment called");
-
     const {
       razorpay_order_id,
       razorpay_payment_id,
@@ -172,7 +172,6 @@ app.post("/verify-payment", async (req, res) => {
       return res.status(400).json({ error: "Invalid payment" });
     }
 
-    // confirm reserved
     for (const box of boxes) {
       const { data } = await supabase
         .from("grid_boxes")
@@ -187,7 +186,6 @@ app.post("/verify-payment", async (req, res) => {
       }
     }
 
-    // book permanently
     for (const box of boxes) {
       await supabase
         .from("grid_boxes")
@@ -198,7 +196,6 @@ app.post("/verify-payment", async (req, res) => {
         .eq("box_number", box);
     }
 
-    // save member
     await supabase.from("members").insert(
       boxes.map((box) => ({
         box_number: box,
@@ -210,20 +207,16 @@ app.post("/verify-payment", async (req, res) => {
       }))
     );
 
-    // email send
     try {
-      console.log("📧 Sending email to:", email);
-
       await resend.emails.send({
         from: "Diya Soaps <onboarding@resend.dev>",
         to: email,
         subject: "Payment Successful 🎉",
         html: `<h2>Thank you ${name}</h2><p>Your booking is confirmed.</p>`,
       });
-
-      console.log("✅ Email sent");
+      console.log("✅ Payment email sent");
     } catch (mailErr) {
-      console.error("❌ Email error:", mailErr);
+      console.error("Payment email error:", mailErr);
     }
 
     res.json({ success: true });
@@ -231,6 +224,47 @@ app.post("/verify-payment", async (req, res) => {
   } catch (err) {
     console.error("Verify error:", err);
     res.status(500).json({ error: "Verification failed" });
+  }
+});
+
+/* ================= CONTACT MAIL ================= */
+
+app.post("/send-contact-mail", async (req, res) => {
+  try {
+    console.log("📨 Contact route hit");
+
+    const { name, email, phone, message } = req.body;
+
+    if (!name || !email || !message) {
+      return res.status(400).json({
+        error: "Missing required fields",
+      });
+    }
+
+    const response = await resend.emails.send({
+      from: "Diya Soaps <onboarding@resend.dev>",
+      to: "diyasoapbusiness@gmail.com",
+      reply_to: email,
+      subject: "New Contact Message",
+      html: `
+        <h2>New message from website</h2>
+        <p><b>Name:</b> ${name}</p>
+        <p><b>Email:</b> ${email}</p>
+        <p><b>Phone:</b> ${phone || "N/A"}</p>
+        <p><b>Message:</b></p>
+        <p>${message}</p>
+      `,
+    });
+
+    console.log("✅ Contact email sent:", response);
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error("❌ Contact mail error:", err);
+    res.status(500).json({
+      error: "Failed to send message",
+    });
   }
 });
 

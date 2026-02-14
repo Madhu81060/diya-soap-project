@@ -2,12 +2,11 @@ import { useState } from "react";
 import { MapPin, Phone, Mail, Clock } from "lucide-react";
 import toast from "react-hot-toast";
 
-// ✅ Safe backend URL (fallback if env missing)
-const API_URL =
+// ✅ Trim to avoid %0A newline issue
+const API_URL = (
   import.meta.env.VITE_API_URL ||
-  "https://diya-backenddiya-backend.onrender.com";
-
-console.log("Contact API URL:", API_URL);
+  "https://diya-backenddiya-backend.onrender.com"
+).trim();
 
 type ContactForm = {
   name: string;
@@ -26,19 +25,16 @@ export default function ContactSection() {
 
   const [loading, setLoading] = useState(false);
 
-  // ================= SUBMIT =================
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!form.name || !form.email || !form.message) {
+    if (!form.name.trim() || !form.email.trim() || !form.message.trim()) {
       toast.error("Please fill Name, Email and Message");
       return;
     }
 
     try {
       setLoading(true);
-
-      console.log("Sending contact form:", form);
 
       const res = await fetch(`${API_URL}/send-contact-mail`, {
         method: "POST",
@@ -48,12 +44,13 @@ export default function ContactSection() {
         body: JSON.stringify(form),
       });
 
-      // ✅ handle non-json responses safely
+      // 🔥 Safe JSON handling (avoids Unexpected token '<')
       let data: any = {};
+      const text = await res.text();
       try {
-        data = await res.json();
+        data = JSON.parse(text);
       } catch {
-        console.warn("No JSON response from server");
+        console.error("Server returned non-JSON:", text);
       }
 
       if (!res.ok) {
@@ -68,8 +65,9 @@ export default function ContactSection() {
         phone: "",
         message: "",
       });
+
     } catch (error: any) {
-      console.error("Contact submit error:", error);
+      console.error("Contact error:", error);
       toast.error(error.message || "Server error. Try again later.");
     } finally {
       setLoading(false);
@@ -80,7 +78,6 @@ export default function ContactSection() {
     <section className="bg-gradient-to-b from-white to-amber-50 py-12 sm:py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* Heading */}
         <div className="text-center mb-10 sm:mb-14">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-3">
             Get in Touch
@@ -90,7 +87,6 @@ export default function ContactSection() {
           </p>
         </div>
 
-        {/* Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
 
           {/* Contact Info */}
