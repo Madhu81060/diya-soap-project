@@ -40,6 +40,27 @@ app.get("/", (req, res) => {
   res.json({ message: "Backend running ✅" });
 });
 
+/* ================= GET ALL SLOTS ================= */
+
+app.get("/api/slots", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("grid_boxes")
+      .select("*")
+      .order("box_number", { ascending: true });
+
+    if (error) {
+      console.error("Slots fetch error:", error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error("Slots API error:", err);
+    res.status(500).json({ error: "Failed to fetch slots" });
+  }
+});
+
 /* ================= CONTACT MAIL ================= */
 
 app.post("/send-contact-mail", async (req, res) => {
@@ -66,7 +87,7 @@ app.post("/send-contact-mail", async (req, res) => {
   }
 });
 
-/* ================= RESERVE ================= */
+/* ================= RESERVE BOXES ================= */
 
 app.post("/reserve-boxes", async (req, res) => {
   try {
@@ -189,17 +210,17 @@ app.post("/verify-payment", async (req, res) => {
 
     const now = new Date().toLocaleString("en-IN");
 
+    /* Customer Email */
     try {
       await resend.emails.send({
         from: "Diya Soaps <support@diyasoaps.com>",
         to: email,
         subject: `🌿 Payment Successful | Order ${orderId}`,
         html: `
-          <h2 style="color:#16a34a;">Payment Confirmed 🌿</h2>
+          <h2>Payment Confirmed</h2>
           <p>Dear ${name},</p>
           <p><b>Order ID:</b> ${orderId}</p>
-          <p><b>Payment ID:</b> ${razorpay_payment_id}</p>
-          <p><b>Amount Paid:</b> ₹${amountPaid}</p>
+          <p><b>Amount:</b> ₹${amountPaid}</p>
           <p><b>Slots:</b> ${boxes.join(", ")}</p>
           <p><b>Date:</b> ${now}</p>
         `,
@@ -208,21 +229,19 @@ app.post("/verify-payment", async (req, res) => {
       console.error("Customer email error:", err);
     }
 
+    /* Owner Email */
     try {
       await resend.emails.send({
         from: "Diya Soaps <support@diyasoaps.com>",
         to: "diyasoapbusiness@gmail.com",
-        subject: `🔔 New Booking | Order ${orderId}`,
+        subject: `🔔 New Booking | ${orderId}`,
         html: `
-          <h2>New Booking Alert</h2>
-          <p><b>Name:</b> ${name}</p>
-          <p><b>Email:</b> ${email}</p>
-          <p><b>Phone:</b> ${phone}</p>
-          <p><b>Order ID:</b> ${orderId}</p>
-          <p><b>Payment ID:</b> ${razorpay_payment_id}</p>
-          <p><b>Amount:</b> ₹${amountPaid}</p>
-          <p><b>Slots:</b> ${boxes.join(", ")}</p>
-          <p><b>Time:</b> ${now}</p>
+          <h2>New Booking</h2>
+          <p>Name: ${name}</p>
+          <p>Email: ${email}</p>
+          <p>Phone: ${phone}</p>
+          <p>Amount: ₹${amountPaid}</p>
+          <p>Slots: ${boxes.join(", ")}</p>
         `,
       });
     } catch (err) {
@@ -237,7 +256,7 @@ app.post("/verify-payment", async (req, res) => {
   }
 });
 
-/* ================= GET MEMBERS (ADMIN) ================= */
+/* ================= GET MEMBERS ================= */
 
 app.get("/members", async (req, res) => {
   try {

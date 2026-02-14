@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { X, Loader2, CheckCircle } from "lucide-react";
 
-const API_BASE = (
-  "https://diya-backenddiya-backend.onrender.com"
-).trim();
+const API_BASE =
+  "https://diya-backenddiya-backend.onrender.com";
 
 interface RegistrationModalProps {
   selectedBoxes: number[];
@@ -21,13 +20,15 @@ export default function RegistrationModal({
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [orderId, setOrderId] = useState("");
 
-  // ✅ Only change here (1 removed → 600 added)
+  // ✅ FINAL ANNUAL OFFER PRICING
   const totalPrice =
     selectedBoxes.length === 1
       ? 600
       : selectedBoxes.length === 2
       ? 900
-      : 1188;
+      : selectedBoxes.length === 4
+      ? 1188 // 🎉 Annual Offer
+      : selectedBoxes.length * 600;
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -46,18 +47,19 @@ export default function RegistrationModal({
     if ((window as any).Razorpay) return;
 
     const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.src =
+      "https://checkout.razorpay.com/v1/checkout.js";
     script.async = true;
     document.body.appendChild(script);
   }, []);
 
-  /* ================= FORM VALIDATION ================= */
+  /* ================= VALIDATION ================= */
 
   const validateForm = () => {
     if (
-      !formData.fullName.trim() ||
-      !formData.email.trim() ||
-      !formData.mobile.trim()
+      !formData.fullName ||
+      !formData.email ||
+      !formData.mobile
     ) {
       setErrorMsg("Please fill all required fields");
       return false;
@@ -82,14 +84,20 @@ export default function RegistrationModal({
     setLoading(true);
 
     try {
-      const reserve = await fetch(`${API_BASE}/reserve-boxes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ boxes: selectedBoxes }),
-      });
+      // Reserve
+      const reserve = await fetch(
+        `${API_BASE}/reserve-boxes`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            boxes: selectedBoxes,
+          }),
+        }
+      );
 
       if (!reserve.ok) {
-        setErrorMsg("Selected slots are already booked.");
+        setErrorMsg("Selected slots already booked");
         setLoading(false);
         return;
       }
@@ -103,32 +111,41 @@ export default function RegistrationModal({
       await startPayment(newOrderId);
     } catch (err) {
       console.error(err);
-      setErrorMsg("Registration failed. Please try again.");
+      setErrorMsg("Registration failed");
       setLoading(false);
     }
   };
 
   /* ================= PAYMENT ================= */
 
-  const startPayment = async (newOrderId: string) => {
+  const startPayment = async (
+    newOrderId: string
+  ) => {
     try {
-      const res = await fetch(`${API_BASE}/create-order`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: totalPrice }),
-      });
+      // ✅ IMPORTANT: SEND BOXES NOT AMOUNT
+      const res = await fetch(
+        `${API_BASE}/create-order`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            boxes: selectedBoxes,
+          }),
+        }
+      );
 
-      if (!res.ok) throw new Error("Order creation failed");
+      if (!res.ok)
+        throw new Error("Order creation failed");
 
       const order = await res.json();
 
       const options = {
-        key: "rzp_live_SEoqwulgqrAXys",
+        key: "rzp_live_SEoqwulgqrAXys", // use test key if testing
         amount: order.amount,
         currency: "INR",
         order_id: order.id,
         name: "Diya Soaps",
-        description: "Lucky Draw Slot Booking",
+        description: "Lucky Draw Booking",
 
         prefill: {
           name: formData.fullName,
@@ -136,9 +153,7 @@ export default function RegistrationModal({
           contact: formData.mobile,
         },
 
-        theme: {
-          color: "#d97706",
-        },
+        theme: { color: "#d97706" },
 
         handler: async (response: any) => {
           try {
@@ -160,11 +175,10 @@ export default function RegistrationModal({
               }
             );
 
-            if (!verify.ok) {
-              setErrorMsg("Payment verification failed.");
-              setLoading(false);
-              return;
-            }
+            if (!verify.ok)
+              throw new Error(
+                "Verification failed"
+              );
 
             setPaymentSuccess(true);
             setLoading(false);
@@ -174,20 +188,24 @@ export default function RegistrationModal({
             }, 5000);
           } catch (err) {
             console.error(err);
-            setErrorMsg("Verification failed.");
+            setErrorMsg(
+              "Payment verification failed"
+            );
             setLoading(false);
           }
         },
 
         modal: {
           ondismiss: () => {
-            setErrorMsg("Payment cancelled.");
+            setErrorMsg("Payment cancelled");
             setLoading(false);
           },
         },
       };
 
-      const rzp = new (window as any).Razorpay(options);
+      const rzp = new (window as any).Razorpay(
+        options
+      );
       rzp.open();
     } catch (err) {
       console.error(err);
@@ -196,7 +214,7 @@ export default function RegistrationModal({
     }
   };
 
-  /* ================= SUCCESS SCREEN ================= */
+  /* ================= SUCCESS ================= */
 
   if (paymentSuccess) {
     return (
@@ -204,23 +222,13 @@ export default function RegistrationModal({
         <div className="bg-white p-10 rounded-3xl text-center max-w-md shadow-2xl">
           <CheckCircle
             size={70}
-            className="mx-auto text-green-500 mb-4 animate-bounce"
+            className="mx-auto text-green-500 mb-4"
           />
-
-          <h2 className="text-3xl font-bold mb-3 text-green-700">
+          <h2 className="text-2xl font-bold">
             Registration Successful 🎉
           </h2>
-
-          <p className="mb-2">
-            Your booking has been confirmed.
-          </p>
-
-          <p className="font-semibold text-lg">
+          <p className="mt-2">
             Order ID: {orderId}
-          </p>
-
-          <p className="mt-3 text-sm text-gray-500">
-            Confirmation email has been sent.
           </p>
         </div>
       </div>
@@ -231,88 +239,70 @@ export default function RegistrationModal({
 
   return (
     <div className="fixed inset-0 flex items-center justify-center p-4 bg-black/60 z-[99999]">
-      <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl">
 
-        <div className="border-b px-6 py-4 flex justify-between items-center">
-          <h2 className="text-xl font-bold">
-            Complete Registration
-          </h2>
-          <button onClick={onClose}>
-            <X />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-
-          <div className="bg-blue-50 border p-3 rounded-lg text-center">
-            <p className="font-semibold">Selected Boxes:</p>
-            <p>{selectedBoxes.join(", ")}</p>
-            <p className="mt-2 font-bold text-lg">
+        <form
+          onSubmit={handleSubmit}
+          className="p-6 space-y-4"
+        >
+          <div className="text-center">
+            <p>
+              Selected Boxes:{" "}
+              {selectedBoxes.join(", ")}
+            </p>
+            <p className="font-bold">
               Total: ₹{totalPrice}
             </p>
           </div>
 
-          {[
-            "fullName",
-            "email",
-            "mobile",
-            "houseNo",
-            "street",
-            "city",
-            "pincode",
-          ].map((field) => (
-            <input
-              key={field}
-              required
-              type={field === "email" ? "email" : "text"}
-              placeholder={field}
-              value={
-                formData[field as keyof typeof formData] as string
-              }
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  [field]: e.target.value,
-                })
-              }
-              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none"
-            />
-          ))}
+          <input
+            required
+            placeholder="Full Name"
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                fullName: e.target.value,
+              })
+            }
+          />
 
-          <label className="flex gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={formData.agreeTerms}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  agreeTerms: e.target.checked,
-                })
-              }
-            />
-            I agree to Lucky Draw terms
-          </label>
+          <input
+            required
+            type="email"
+            placeholder="Email"
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                email: e.target.value,
+              })
+            }
+          />
+
+          <input
+            required
+            placeholder="Mobile"
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                mobile: e.target.value,
+              })
+            }
+          />
 
           {errorMsg && (
-            <p className="text-red-600 text-sm">
+            <p className="text-red-500">
               {errorMsg}
             </p>
           )}
 
           <button
             disabled={loading}
-            className="w-full bg-amber-600 text-white py-4 rounded-lg font-bold flex justify-center gap-2 hover:bg-amber-700 transition"
+            className="bg-amber-600 text-white px-4 py-2 rounded"
           >
-            {loading ? (
-              <>
-                <Loader2 className="animate-spin" />
-                Processing...
-              </>
-            ) : (
-              "Register & Pay"
-            )}
+            {loading
+              ? "Processing..."
+              : "Register & Pay"}
           </button>
-
         </form>
       </div>
     </div>
