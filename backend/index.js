@@ -137,7 +137,6 @@ app.post("/verify-payment", async (req, res) => {
       return res.status(400).json({ error: "No boxes provided" });
     }
 
-    /* VERIFY SIGNATURE */
     const body = razorpay_order_id + "|" + razorpay_payment_id;
 
     const expected = crypto
@@ -149,7 +148,6 @@ app.post("/verify-payment", async (req, res) => {
       return res.status(400).json({ error: "Invalid payment" });
     }
 
-    /* BOOK SLOTS */
     for (const box of boxes) {
       await supabase
         .from("grid_boxes")
@@ -160,7 +158,6 @@ app.post("/verify-payment", async (req, res) => {
         .eq("box_number", box);
     }
 
-    /* SAVE MEMBER */
     await supabase.from("members").insert({
       box_number: boxes.join(", "),
       full_name: name,
@@ -171,8 +168,10 @@ app.post("/verify-payment", async (req, res) => {
       payment_status: "success",
     });
 
+    /* ===== UPDATED AMOUNT LOGIC ===== */
+
     const amountPaid =
-      boxes.length === 1 ? 1 :
+      boxes.length === 1 ? 600 :
       boxes.length === 2 ? 900 : 1188;
 
     const now = new Date().toLocaleString("en-IN");
@@ -180,7 +179,7 @@ app.post("/verify-payment", async (req, res) => {
     /* ================= CUSTOMER EMAIL ================= */
 
     try {
-      const result = await resend.emails.send({
+      await resend.emails.send({
         from: "Diya Soaps <support@diyasoaps.com>",
         to: email,
         subject: `🌿 Payment Successful | Order ${orderId}`,
@@ -197,9 +196,6 @@ app.post("/verify-payment", async (req, res) => {
           <p>Regards,<br/>Team Diya Soaps</p>
         `,
       });
-
-      console.log("Customer email result:", result);
-
     } catch (err) {
       console.error("Customer email error:", err);
     }
@@ -207,7 +203,7 @@ app.post("/verify-payment", async (req, res) => {
     /* ================= OWNER EMAIL ================= */
 
     try {
-      const result = await resend.emails.send({
+      await resend.emails.send({
         from: "Diya Soaps <support@diyasoaps.com>",
         to: "diyasoapbusiness@gmail.com",
         subject: `🔔 New Booking | Order ${orderId}`,
@@ -223,9 +219,6 @@ app.post("/verify-payment", async (req, res) => {
           <p><b>Time:</b> ${now}</p>
         `,
       });
-
-      console.log("Owner email result:", result);
-
     } catch (err) {
       console.error("Owner email error:", err);
     }
