@@ -22,44 +22,19 @@ app.use((req, res, next) => {
   next();
 });
 
-/* ================= SUPABASE ================= */
+/* ================= INIT SERVICES ================= */
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-/* ================= RAZORPAY ================= */
-
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-/* ================= RESEND ================= */
-
 const resend = new Resend(process.env.RESEND_API_KEY);
-
-/* ================= AUTO CLEAN RESERVED ================= */
-
-setInterval(async () => {
-  try {
-    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
-
-    await supabase
-      .from("grid_boxes")
-      .update({
-        status: "available",
-        reserved_at: null,
-      })
-      .eq("status", "reserved")
-      .lt("reserved_at", fiveMinAgo.toISOString());
-
-    console.log("🧹 Cleaned old reserved slots");
-  } catch (err) {
-    console.error("Cleanup error:", err);
-  }
-}, 60000);
 
 /* ================= HEALTH ================= */
 
@@ -73,7 +48,7 @@ app.post("/reserve-boxes", async (req, res) => {
   try {
     const { boxes } = req.body;
 
-    if (!boxes || boxes.length === 0) {
+    if (!boxes?.length) {
       return res.status(400).json({ error: "No boxes selected" });
     }
 
@@ -96,7 +71,6 @@ app.post("/reserve-boxes", async (req, res) => {
     }
 
     res.json({ success: true });
-
   } catch (err) {
     console.error("Reserve error:", err);
     res.status(500).json({ error: "Reserve failed" });
@@ -109,6 +83,10 @@ app.post("/create-order", async (req, res) => {
   try {
     const { amount } = req.body;
 
+    if (!amount) {
+      return res.status(400).json({ error: "Amount required" });
+    }
+
     const order = await razorpay.orders.create({
       amount: amount * 100,
       currency: "INR",
@@ -116,7 +94,6 @@ app.post("/create-order", async (req, res) => {
     });
 
     res.json(order);
-
   } catch (err) {
     console.error("Create order error:", err);
     res.status(500).json({ error: "Order failed" });
@@ -135,9 +112,10 @@ app.post("/verify-payment", async (req, res) => {
       name,
       email,
       phone,
-      orderId
+      orderId,
     } = req.body;
 
+    /* 1️⃣ Verify Razorpay Signature */
     const body = razorpay_order_id + "|" + razorpay_payment_id;
 
     const expected = crypto
@@ -149,7 +127,7 @@ app.post("/verify-payment", async (req, res) => {
       return res.status(400).json({ error: "Invalid payment" });
     }
 
-    /* Confirm reserved */
+    /* 2️⃣ Confirm Reserved */
     for (const box of boxes) {
       const { data } = await supabase
         .from("grid_boxes")
@@ -158,11 +136,13 @@ app.post("/verify-payment", async (req, res) => {
         .limit(1);
 
       if (!data || data[0].status !== "reserved") {
-        return res.status(400).json({ error: "Slot lost during payment" });
+        return res.status(400).json({
+          error: "Slot lost during payment",
+        });
       }
     }
 
-    /* Book permanently */
+    /* 3️⃣ Book Slots */
     for (const box of boxes) {
       await supabase
         .from("grid_boxes")
@@ -173,7 +153,7 @@ app.post("/verify-payment", async (req, res) => {
         .eq("box_number", box);
     }
 
-    /* Save member */
+    /* 4️⃣ Save Member */
     await supabase.from("members").insert(
       boxes.map((box) => ({
         box_number: box,
@@ -186,70 +166,68 @@ app.post("/verify-payment", async (req, res) => {
       }))
     );
 
-    /* ================= PROFESSIONAL CUSTOMER EMAIL ================= */
+    /* ================= EMAILS ================= */
 
-    await resend.emails.send({
-      from: "Diya Soaps <onboarding@resend.dev>",
-      to: email,
-      subject: "Your Booking is Confirmed | Diya Soaps 🌿",
-      html: `
-      <div style="font-family:Arial,Helvetica,sans-serif;background:#f9fafb;padding:30px;">
-        <div style="max-width:600px;margin:auto;background:white;padding:30px;border-radius:12px;box-shadow:0 5px 20px rgba(0,0,0,0.08);">
-          
-          <h2 style="color:#16a34a;margin-bottom:10px;">Booking Confirmation 🎉</h2>
+    // ✅ CUSTOMER EMAIL
+    try {
+      await resend.emails.send({
+        from: "Diya Soaps <onboarding@resend.dev>",
+        to: email,
+        subject: "Your Booking is Confirmed | Diya Soaps 🌿",
+        html: `
+        <div style="font-family:Arial;padding:25px;background:#f9fafb">
+          <div style="max-width:600px;margin:auto;background:#fff;padding:30px;border-radius:10px">
+            <h2 style="color:#16a34a;">Booking Confirmed 🎉</h2>
+            <p>Dear <b>${name}</b>,</p>
+            <p>Your booking has been successfully confirmed.</p>
 
-          <p>Dear <strong>${name}</strong>,</p>
+            <div style="background:#f0fdf4;padding:15px;border-radius:8px;margin:20px 0;">
+              <p><b>Order ID:</b> ${orderId}</p>
+              <p><b>Slot(s):</b> ${boxes.join(", ")}</p>
+              <p><b>Payment ID:</b> ${razorpay_payment_id}</p>
+            </div>
 
-          <p>Thank you for choosing <strong>Diya Soaps</strong>. 
-          We are delighted to confirm your booking.</p>
+            <h3 style="color:#ea580c;">Exclusive Benefits 🎁</h3>
+            <ul>
+              <li>Lucky Draw Entry</li>
+              <li>Festival Special Offers</li>
+              <li>Priority Access to New Products</li>
+            </ul>
 
-          <div style="background:#f0fdf4;padding:15px;border-radius:8px;margin:20px 0;">
-            <p><strong>Order ID:</strong> ${orderId}</p>
-            <p><strong>Booked Slot(s):</strong> ${boxes.join(", ")}</p>
-            <p><strong>Payment ID:</strong> ${razorpay_payment_id}</p>
+            <p>Thank you for trusting Diya Soaps.</p>
+            <p><b>Team Diya Soaps</b><br/>Hyderabad, India</p>
           </div>
-
-          <h3 style="margin-top:20px;color:#ea580c;">🎁 Exclusive Benefits</h3>
-          <ul>
-            <li>Lucky Draw Entry</li>
-            <li>Festival Special Offers</li>
-            <li>Priority Access to Upcoming Products</li>
-          </ul>
-
-          <p style="margin-top:25px;">
-            If you have any questions, feel free to reply to this email.
-          </p>
-
-          <hr style="margin:25px 0;" />
-
-          <p style="font-size:14px;color:#555;">
-            Warm Regards,<br/>
-            <strong>Team Diya Soaps</strong><br/>
-            Hyderabad, India
-          </p>
         </div>
-      </div>
-      `,
-    });
+        `,
+      });
 
-    /* ================= OWNER EMAIL ================= */
+      console.log("✅ Customer email sent");
+    } catch (mailErr) {
+      console.error("Customer email error:", mailErr);
+    }
 
-    await resend.emails.send({
-      from: "Diya Soaps <onboarding@resend.dev>",
-      to: "diyasoapbusiness@gmail.com",
-      subject: "🔥 New Slot Booking Alert",
-      html: `
-        <h2>New Customer Booking</h2>
-        <p><b>Name:</b> ${name}</p>
-        <p><b>Email:</b> ${email}</p>
-        <p><b>Phone:</b> ${phone}</p>
-        <p><b>Order ID:</b> ${orderId}</p>
-        <p><b>Booked Slot(s):</b> ${boxes.join(", ")}</p>
-      `,
-    });
+    // ✅ OWNER EMAIL
+    try {
+      await resend.emails.send({
+        from: "Diya Soaps <onboarding@resend.dev>",
+        to: "diyasoapbusiness@gmail.com",
+        subject: "🔥 New Slot Booking Alert",
+        html: `
+          <h2>New Booking Received</h2>
+          <p><b>Name:</b> ${name}</p>
+          <p><b>Email:</b> ${email}</p>
+          <p><b>Phone:</b> ${phone}</p>
+          <p><b>Order ID:</b> ${orderId}</p>
+          <p><b>Slot(s):</b> ${boxes.join(", ")}</p>
+        `,
+      });
+
+      console.log("✅ Owner email sent");
+    } catch (mailErr) {
+      console.error("Owner email error:", mailErr);
+    }
 
     res.json({ success: true });
-
   } catch (err) {
     console.error("Verify error:", err);
     res.status(500).json({ error: "Verification failed" });
