@@ -55,7 +55,6 @@ const releaseExpiredReservations = async () => {
       })
       .eq("status", "reserved")
       .lt("reserved_at", fiveMinutesAgo);
-
   } catch (err) {
     console.error("Auto release error:", err);
   }
@@ -131,20 +130,28 @@ app.post("/reserve-boxes", async (req, res) => {
   }
 });
 
-/* ================= CREATE ORDER ================= */
+/* ================= CREATE ORDER (✅ ONLY CHANGE) ================= */
 
 app.post("/create-order", async (req, res) => {
   try {
-    const { boxes } = req.body;
+    const { boxes, packType } = req.body;
 
     if (!boxes?.length)
       return res.status(400).json({ error: "No boxes selected" });
 
-    let amount =
-      boxes.length === 1 ? 600 :
-      boxes.length === 2 ? 900 :
-      boxes.length === 4 ? 1188 :
-      boxes.length * 600;
+    let amount = 0;
+
+    if (packType === "HALF_YEAR") {
+      if (boxes.length !== 1)
+        return res.status(400).json({ error: "Half Year requires 1 box" });
+      amount = 900;
+    } else if (packType === "ANNUAL") {
+      if (boxes.length !== 2)
+        return res.status(400).json({ error: "Annual requires 2 boxes" });
+      amount = 1188;
+    } else {
+      amount = boxes.length * 600;
+    }
 
     const order = await razorpay.orders.create({
       amount: amount * 100,
@@ -158,7 +165,7 @@ app.post("/create-order", async (req, res) => {
   }
 });
 
-/* ================= VERIFY PAYMENT ================= */
+/* ================= VERIFY PAYMENT (✅ ONLY CHANGE) ================= */
 
 app.post("/verify-payment", async (req, res) => {
   try {
@@ -167,6 +174,7 @@ app.post("/verify-payment", async (req, res) => {
       razorpay_payment_id,
       razorpay_signature,
       boxes,
+      packType,
       name,
       email,
       phone,
@@ -187,6 +195,20 @@ app.post("/verify-payment", async (req, res) => {
     if (expected !== razorpay_signature)
       return res.status(400).json({ error: "Invalid payment" });
 
+    let amountPaid = 0;
+
+    if (packType === "HALF_YEAR") {
+      if (boxes.length !== 1)
+        return res.status(400).json({ error: "Invalid Half Year pack" });
+      amountPaid = 900;
+    } else if (packType === "ANNUAL") {
+      if (boxes.length !== 2)
+        return res.status(400).json({ error: "Invalid Annual pack" });
+      amountPaid = 1188;
+    } else {
+      amountPaid = boxes.length * 600;
+    }
+
     /* Update Slots */
     for (const box of boxes) {
       await supabase
@@ -197,12 +219,6 @@ app.post("/verify-payment", async (req, res) => {
         })
         .eq("box_number", box);
     }
-
-    let amountPaid =
-      boxes.length === 1 ? 600 :
-      boxes.length === 2 ? 900 :
-      boxes.length === 4 ? 1188 :
-      boxes.length * 600;
 
     /* Save Member */
     await supabase.from("members").insert({
@@ -250,7 +266,6 @@ app.post("/verify-payment", async (req, res) => {
     });
 
     res.json({ success: true });
-
   } catch {
     res.status(500).json({ error: "Verification failed" });
   }

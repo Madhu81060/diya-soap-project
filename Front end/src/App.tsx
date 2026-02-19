@@ -23,6 +23,9 @@ import ProtectedRoute from "./auth/ProtectedRoute";
 
 import useScrollReveal from "./hooks/useScrollReveal";
 
+/* CONTEXT */
+import { SlotProvider } from "./context/SlotContext";
+
 /* POLICY PAGES */
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Terms from "./pages/Terms";
@@ -31,14 +34,9 @@ import ShippingPolicy from "./pages/ShippingPolicy";
 import ContactPage from "./pages/ContactPage";
 
 function LandingPage() {
-
-  // ✅ Selected boxes for registration
-  const [selectedBoxes, setSelectedBoxes] =
-    useState<number[] | null>(null);
-
-  // ✅ NEW: Mode state (important fix)
-  const [mode, setMode] =
-    useState<"single" | "half" | "monthly">("single");
+  const [selectedBoxes, setSelectedBoxes] = useState<number[]>([]);
+  const [offerPack, setOfferPack] =
+    useState<"HALF_YEAR" | "ANNUAL" | null>(null);
 
   useScrollReveal();
 
@@ -52,7 +50,6 @@ function LandingPage() {
 
   const navigate = useNavigate();
 
-  // ✅ Smooth scroll navigation
   const handleNavigate = (section: string) => {
     const refs: Record<string, React.RefObject<HTMLDivElement>> = {
       grid: gridRef,
@@ -70,7 +67,6 @@ function LandingPage() {
     }
 
     const ref = refs[section];
-
     if (ref?.current) {
       const y =
         ref.current.getBoundingClientRect().top +
@@ -80,18 +76,25 @@ function LandingPage() {
     }
   };
 
+  /* 🔥 SHOP → OFFER HANDLER */
+  const handleBuyFromShop = (
+    boxes: number[],
+    offer: "HALF_YEAR" | "ANNUAL" | null
+  ) => {
+    setSelectedBoxes([]); // reset previous
+    setOfferPack(offer); // 🔥 IMPORTANT
+    handleNavigate("grid");
+  };
+
   return (
     <div className="min-h-screen bg-transparent">
-
       <Navbar onNavigate={handleNavigate} />
       <TopTrustBar />
 
-      {/* HERO */}
       <section id="home" className="reveal">
         <Hero onJoinClick={() => handleNavigate("grid")} />
       </section>
 
-      {/* PRODUCT */}
       <div id="product" ref={productRef} className="reveal">
         <ProductSection
           onProofClick={() => handleNavigate("proof")}
@@ -99,62 +102,59 @@ function LandingPage() {
         />
       </div>
 
-      {/* ✅ SHOP (IMPORTANT FIX) */}
+      {/* 🔥 SHOP SECTION */}
       <div id="shop" ref={shopRef} className="reveal">
-        <ShopSection
-          onBuy={(boxes) => {
-
-            // set mode based on selection
-            if (boxes === 1) setMode("single");
-            if (boxes === 2) setMode("half");
-            if (boxes === 4) setMode("monthly");
-
-            handleNavigate("grid");
-          }}
-        />
+        <ShopSection onBuy={handleBuyFromShop} />
       </div>
 
-      {/* ✅ GRID (IMPORTANT FIX) */}
+      {/* 🔥 GRID SECTION */}
       <div id="grid" ref={gridRef} className="reveal">
         <GridSection
-          mode={mode}
-          instruction={`Select ${
-            mode === "monthly" ? 4 :
-            mode === "half" ? 2 : 1
-          } boxes`}
-          onBoxesSelected={(boxes) =>
-            setSelectedBoxes(boxes)
+          onBoxesSelected={(boxes) => setSelectedBoxes(boxes)}
+          maxSelectable={
+            offerPack === "HALF_YEAR"
+              ? 1
+              : offerPack === "ANNUAL"
+              ? 2
+              : undefined
+          }
+          instruction={
+            offerPack === "HALF_YEAR"
+              ? "Half Yearly Pack selected – Please select 1 box only (₹900)"
+              : offerPack === "ANNUAL"
+              ? "Annual Pack selected – Please select 2 boxes only (₹1188)"
+              : "Select your boxes"
           }
         />
       </div>
 
-      {/* LUCKY DRAW */}
       <div id="luckyDraw" ref={luckyDrawRef} className="reveal">
         <LuckyDrawSection />
       </div>
 
-      {/* PROOF */}
       <div id="proof" ref={proofRef} className="reveal">
         <ProofSection />
       </div>
 
-      {/* VIDEOS */}
       <div id="videos" ref={videosRef} className="reveal">
         <VideosSection />
       </div>
 
-      {/* CONTACT */}
       <div id="contact" ref={contactRef} className="reveal">
         <ContactSection />
       </div>
 
       <Footer />
 
-      {/* Registration modal */}
-      {selectedBoxes && (
+      {/* 🔥 REGISTRATION MODAL */}
+      {selectedBoxes.length > 0 && (
         <RegistrationModal
           selectedBoxes={selectedBoxes}
-          onClose={() => setSelectedBoxes(null)}
+          offerPack={offerPack}
+          onClose={() => {
+            setSelectedBoxes([]);
+            setOfferPack(null);
+          }}
           onSuccess={() => {}}
         />
       )}
@@ -171,35 +171,34 @@ function LandingPage() {
       >
         <Shield size={20} />
       </button>
-
     </div>
   );
 }
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <SlotProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
 
-        <Route path="/" element={<LandingPage />} />
+          <Route path="/admin-login" element={<AdminLogin />} />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminPanel />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route path="/admin-login" element={<AdminLogin />} />
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute>
-              <AdminPanel />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route path="/privacy" element={<PrivacyPolicy />} />
-        <Route path="/terms" element={<Terms />} />
-        <Route path="/refund" element={<RefundPolicy />} />
-        <Route path="/shipping" element={<ShippingPolicy />} />
-        <Route path="/contact-page" element={<ContactPage />} />
-
-      </Routes>
-    </BrowserRouter>
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/refund" element={<RefundPolicy />} />
+          <Route path="/shipping" element={<ShippingPolicy />} />
+          <Route path="/contact-page" element={<ContactPage />} />
+        </Routes>
+      </BrowserRouter>
+    </SlotProvider>
   );
 }
