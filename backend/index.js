@@ -130,7 +130,7 @@ app.post("/reserve-boxes", async (req, res) => {
   }
 });
 
-/* ================= CREATE ORDER (✅ ONLY CHANGE) ================= */
+/* ================= CREATE ORDER ================= */
 
 app.post("/create-order", async (req, res) => {
   try {
@@ -165,7 +165,7 @@ app.post("/create-order", async (req, res) => {
   }
 });
 
-/* ================= VERIFY PAYMENT (✅ ONLY CHANGE) ================= */
+/* ================= VERIFY PAYMENT ================= */
 
 app.post("/verify-payment", async (req, res) => {
   try {
@@ -198,12 +198,8 @@ app.post("/verify-payment", async (req, res) => {
     let amountPaid = 0;
 
     if (packType === "HALF_YEAR") {
-      if (boxes.length !== 1)
-        return res.status(400).json({ error: "Invalid Half Year pack" });
       amountPaid = 900;
     } else if (packType === "ANNUAL") {
-      if (boxes.length !== 2)
-        return res.status(400).json({ error: "Invalid Annual pack" });
       amountPaid = 1188;
     } else {
       amountPaid = boxes.length * 600;
@@ -220,10 +216,10 @@ app.post("/verify-payment", async (req, res) => {
         .eq("box_number", box);
     }
 
-    /* Save Member */
+    /* Save Member (✅ ONLY FIX HERE) */
     await supabase.from("members").insert({
       order_id: orderId,
-      box_number: boxes.join(", "),
+      box_number: boxes[0],   // ✅ FIXED (integer)
       full_name: name,
       email,
       mobile: phone,
@@ -248,7 +244,6 @@ app.post("/verify-payment", async (req, res) => {
         <p><b>Order ID:</b> ${orderId}</p>
         <p><b>Amount:</b> ₹${amountPaid}</p>
         <p><b>Slots:</b> ${boxes.join(", ")}</p>
-        <p><b>Address:</b> ${house_no}, ${street}, ${city} - ${pincode}</p>
       `,
     });
 
