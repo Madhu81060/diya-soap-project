@@ -253,8 +253,6 @@
 // app.listen(PORT, () => {
 //   console.log("🚀 Server running on port", PORT);
 // });
-
-
 import express from "express";
 import dotenv from "dotenv";
 import Razorpay from "razorpay";
@@ -289,25 +287,41 @@ const razorpay = new Razorpay({
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-/* ================= PACKAGE HELPER ================= */
+/* ================= PACKAGE HELPER (🔥 CORE LOGIC) ================= */
 /**
- * Package rules:
- *  regular → 1 box  | 3 soaps  | ₹600
- *  half    → 1 box  | 6 soaps  | ₹900   (Half-Yearly Pack)
- *  annual  → 2 boxes| 12 soaps | ₹1,188 (Annual Pack)
+ * PRICING RULES
+ * REGULAR  : 1 box  → 3 soaps  → ₹600
+ * HALF     : 1 box  → 6 soaps  → ₹900   (per pack)
+ * ANNUAL   : 2 box  → 12 soaps → ₹1188  (per pack)
  */
 function getPackageDetails(boxes, packageMode) {
-  // ✅ FIX 1: Regular price was "1" (typo) — now correctly 600
-  if (packageMode === "half")    return { label: "Half-Yearly Pack", boxes: 1, soaps: 6,  price: 900  };
-  if (packageMode === "annual")  return { label: "Annual Pack",      boxes: 2, soaps: 12, price: 1188 };
-  if (packageMode === "regular") return { label: "Regular Box",      boxes: 1, soaps: 3,  price: 1  };
+  const boxCount = Array.isArray(boxes) ? boxes.length : boxes;
 
-  // Fallback: derive from box count
-  const count = Array.isArray(boxes) ? boxes.length : boxes;
-  if (count === 2) return { label: "Annual Pack", boxes: 2,     soaps: 12,        price: 1188       };
-  if (count === 1) return { label: "Regular Box", boxes: 1,     soaps: 3,         price: 1       };
+  if (packageMode === "HALF_YEAR") {
+    return {
+      label: "Half-Yearly Pack",
+      boxes: boxCount,
+      soaps: boxCount * 6,
+      price: boxCount * 900,
+    };
+  }
 
-  return { label: "Regular Box (×" + count + ")", boxes: count, soaps: count * 3, price: 1 };
+  if (packageMode === "ANNUAL") {
+    return {
+      label: "Annual Pack",
+      boxes: boxCount,
+      soaps: boxCount * 6, // 2 boxes = 12 soaps
+      price: (boxCount / 2) * 1188,
+    };
+  }
+
+  // NORMAL
+  return {
+    label: `Regular Box (×${boxCount})`,
+    boxes: boxCount,
+    soaps: boxCount * 3,
+    price: boxCount * 600,
+  };
 }
 
 /* ================= HEALTH ================= */
@@ -337,6 +351,7 @@ app.get("/api/slots", async (req, res) => {
       .from("grid_boxes")
       .select("*")
       .order("box_number", { ascending: true });
+
     if (error) throw error;
     res.json(data);
   } catch {
@@ -344,66 +359,24 @@ app.get("/api/slots", async (req, res) => {
   }
 });
 
-/* ================= CONTACT FORM ================= */
-app.post("/send-contact-mail", async (req, res) => {
-  try {
-    const { name, email, phone, message } = req.body;
-    await resend.emails.send({
-      from: "Diya Soaps <support@diyasoaps.com>",
-      to: "diyasoapbusiness@gmail.com",
-      subject: "📩 New Contact Message",
-      html: `
-        <h2>New Contact Enquiry</h2>
-        <p><b>Name:</b> ${name}</p>
-        <p><b>Email:</b> ${email}</p>
-        <p><b>Phone:</b> ${phone}</p>
-        <p><b>Message:</b> ${message}</p>
-      `,
-    });
-    res.json({ success: true });
-  } catch {
-    res.status(500).json({ error: "Mail failed" });
-  }
-});
-
-/* ================= RESERVE BOXES ================= */
-app.post("/reserve-boxes", async (req, res) => {
-  try {
-    const { boxes } = req.body;
-    const { data } = await supabase
-      .from("grid_boxes")
-      .update({ status: "reserved", reserved_at: new Date().toISOString() })
-      .in("box_number", boxes)
-      .eq("status", "available")
-      .select();
-
-    if (!data || data.length !== boxes.length) {
-      return res.status(400).json({ error: "Slots already taken" });
-    }
-    res.json({ success: true });
-  } catch {
-    res.status(500).json({ error: "Reserve failed" });
-  }
-});
-
 /* ================= CREATE ORDER ================= */
 app.post("/create-order", async (req, res) => {
   try {
-    const { boxes, packageMode } = req.body;
+    const { boxes, packType } = req.body;
 
-    if (!boxes?.length)
+    if (!boxes || !boxes.length) {
       return res.status(400).json({ error: "No boxes selected" });
+    }
 
-    const pkg = getPackageDetails(boxes, packageMode);
+    const pkg = getPackageDetails(boxes, packType);
 
-    // ✅ FIX 2: was hardcoded `amount: 100` (₹1) — now correctly pkg.price * 100
     const order = await razorpay.orders.create({
       amount: pkg.price * 100,
       currency: "INR",
       receipt: "order_" + Date.now(),
     });
 
-    res.json({ ...order, packageDetails: pkg });
+    res.json(order);
   } catch (err) {
     console.error("Create order error:", err);
     res.status(500).json({ error: "Order failed" });
@@ -418,18 +391,18 @@ app.post("/verify-payment", async (req, res) => {
       razorpay_payment_id,
       razorpay_signature,
       boxes,
-      packageMode,
-      name,
+      packType,
+      fullName,
       email,
-      phone,
-      house_no,
+      mobile,
+      houseNo,
       street,
       city,
       pincode,
       orderId,
     } = req.body;
 
-    /* ── Signature Verification ── */
+    /* ── Verify Signature ── */
     const body = razorpay_order_id + "|" + razorpay_payment_id;
     const expected = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
@@ -437,14 +410,13 @@ app.post("/verify-payment", async (req, res) => {
       .digest("hex");
 
     if (expected !== razorpay_signature) {
-      console.error("Signature mismatch — payment invalid");
       return res.status(400).json({ error: "Invalid payment signature" });
     }
 
     /* ── Resolve Package ── */
-    const pkg = getPackageDetails(boxes, packageMode);
+    const pkg = getPackageDetails(boxes, packType);
 
-    /* ── Update Grid Boxes → booked ── */
+    /* ── Mark Boxes as Booked ── */
     for (const box of boxes) {
       await supabase
         .from("grid_boxes")
@@ -452,111 +424,41 @@ app.post("/verify-payment", async (req, res) => {
         .eq("box_number", box);
     }
 
-    /* ── Insert Member into DB ── */
-    // ✅ This is the core fix: runs after valid signature only
-    // package_type and no_of_soaps are now correctly populated
-    const { error: insertError } = await supabase.from("members").insert({
-      order_id:       orderId,
-      box_number:     boxes.join(", "),
-      full_name:      name,
+    /* ── Insert Member ── */
+    await supabase.from("members").insert({
+      order_id: orderId,
+      box_number: boxes.join(", "),
+      full_name: fullName,
       email,
-      mobile:         phone,
-      house_no,
+      mobile,
+      house_no: houseNo,
       street,
       city,
       pincode,
-      package_type:   pkg.label,          // e.g. "Half-Yearly Pack"
-      no_of_soaps:    pkg.soaps,          // e.g. 6
-      amount_paid:    pkg.price,          // e.g. 900
-      payment_id:     razorpay_payment_id,
+      package_type: pkg.label,
+      no_of_soaps: pkg.soaps,
+      amount_paid: pkg.price,
+      payment_id: razorpay_payment_id,
       payment_status: "success",
-      created_at:     new Date().toISOString(),
+      created_at: new Date().toISOString(),
     });
 
-    if (insertError) {
-      // Payment succeeded but DB insert failed — log for manual recovery
-      console.error("⚠️ Member insert failed:", JSON.stringify(insertError));
-    } else {
-      console.log("✅ Member inserted:", orderId);
-    }
-
-    /* ── Customer Confirmation Email ── */
+    /* ── Customer Email ── */
     await resend.emails.send({
       from: "Diya Soaps <support@diyasoaps.com>",
       to: email,
       subject: `🎉 Booking Confirmed | ${orderId}`,
       html: `
-        <div style="font-family:sans-serif;max-width:560px;margin:auto;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
-          <div style="background:#1a1a1a;padding:24px;text-align:center;">
-            <h1 style="color:#f5c518;margin:0;font-size:22px;">🌿 Diya Soaps</h1>
-            <p style="color:#aaa;margin:4px 0 0;">Your order is confirmed!</p>
-          </div>
-          <div style="padding:28px;">
-            <p style="font-size:16px;">Dear <b>${name}</b>,</p>
-            <p>Thank you for your purchase. Here are your order details:</p>
-            <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-              <tr style="background:#f9fafb;">
-                <td style="padding:10px 12px;font-weight:600;color:#374151;">Order ID</td>
-                <td style="padding:10px 12px;">${orderId}</td>
-              </tr>
-              <tr>
-                <td style="padding:10px 12px;font-weight:600;color:#374151;">Package</td>
-                <td style="padding:10px 12px;">${pkg.label}</td>
-              </tr>
-              <tr style="background:#f9fafb;">
-                <td style="padding:10px 12px;font-weight:600;color:#374151;">No. of Soaps</td>
-                <td style="padding:10px 12px;">${pkg.soaps} soaps</td>
-              </tr>
-              <tr>
-                <td style="padding:10px 12px;font-weight:600;color:#374151;">Box(es) Selected</td>
-                <td style="padding:10px 12px;">${boxes.join(", ")}</td>
-              </tr>
-              <tr style="background:#f9fafb;">
-                <td style="padding:10px 12px;font-weight:600;color:#374151;">Amount Paid</td>
-                <td style="padding:10px 12px;">₹${pkg.price}</td>
-              </tr>
-              <tr>
-                <td style="padding:10px 12px;font-weight:600;color:#374151;">Delivery Address</td>
-                <td style="padding:10px 12px;">${house_no}, ${street}, ${city} - ${pincode}</td>
-              </tr>
-            </table>
-            <p style="color:#6b7280;font-size:14px;">
-              You are now eligible for the Lucky Draw. 🎁<br/>
-              We will notify you of any updates via this email.
-            </p>
-            <p style="color:#6b7280;font-size:14px;">
-              For support: <a href="mailto:support@diyasoaps.com">support@diyasoaps.com</a>
-            </p>
-          </div>
-          <div style="background:#f3f4f6;padding:14px;text-align:center;font-size:12px;color:#9ca3af;">
-            © Diya Soaps. All rights reserved.
-          </div>
-        </div>
+        <h2>Booking Confirmed</h2>
+        <p><b>Order:</b> ${orderId}</p>
+        <p><b>Package:</b> ${pkg.label}</p>
+        <p><b>Boxes:</b> ${boxes.join(", ")}</p>
+        <p><b>Soaps:</b> ${pkg.soaps}</p>
+        <p><b>Amount:</b> ₹${pkg.price}</p>
       `,
     });
 
-    /* ── Owner Notification Email ── */
-    await resend.emails.send({
-      from: "Diya Soaps <support@diyasoaps.com>",
-      to: "diyasoapbusiness@gmail.com",
-      subject: `🔔 New Booking | ${orderId}`,
-      html: `
-        <h2>New Booking Received</h2>
-        <table style="border-collapse:collapse;width:100%;">
-          <tr><td style="padding:8px;font-weight:bold;">Order ID</td>    <td style="padding:8px;">${orderId}</td></tr>
-          <tr><td style="padding:8px;font-weight:bold;">Name</td>         <td style="padding:8px;">${name}</td></tr>
-          <tr><td style="padding:8px;font-weight:bold;">Phone</td>        <td style="padding:8px;">${phone}</td></tr>
-          <tr><td style="padding:8px;font-weight:bold;">Email</td>        <td style="padding:8px;">${email}</td></tr>
-          <tr><td style="padding:8px;font-weight:bold;">Package</td>      <td style="padding:8px;">${pkg.label}</td></tr>
-          <tr><td style="padding:8px;font-weight:bold;">No. of Soaps</td> <td style="padding:8px;">${pkg.soaps}</td></tr>
-          <tr><td style="padding:8px;font-weight:bold;">Box(es)</td>      <td style="padding:8px;">${boxes.join(", ")}</td></tr>
-          <tr><td style="padding:8px;font-weight:bold;">Amount</td>       <td style="padding:8px;">₹${pkg.price}</td></tr>
-          <tr><td style="padding:8px;font-weight:bold;">Address</td>      <td style="padding:8px;">${house_no}, ${street}, ${city} - ${pincode}</td></tr>
-        </table>
-      `,
-    });
-
-    res.json({ success: true, packageDetails: pkg });
+    res.json({ success: true });
 
   } catch (err) {
     console.error("Verify payment error:", err);
@@ -574,8 +476,6 @@ app.get("/members", async (req, res) => {
 
     if (error) throw error;
     res.json(data);
-    console.log(data);
-
   } catch {
     res.status(500).json({ error: "Failed to fetch members" });
   }
@@ -586,3 +486,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🚀 Server running on port", PORT);
 });
+

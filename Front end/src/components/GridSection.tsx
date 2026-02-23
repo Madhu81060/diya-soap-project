@@ -16,7 +16,7 @@ const PHASE_ONE_LIMIT = 250;
 export default function GridSection({
   onBoxesSelected,
   instruction,
-  maxSelectable, // ✅ NEW
+  maxSelectable,
 }: GridSectionProps) {
   const [boxes, setBoxes] = useState<GridBox[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,6 +50,13 @@ export default function GridSection({
   useEffect(() => {
     fetchBoxes();
   }, [fetchBoxes]);
+
+  /* ================= 🔥 RESET SELECTION ON OFFER CHANGE ================= */
+
+  useEffect(() => {
+    setSelected([]);
+    setSubmitError("");
+  }, [maxSelectable]);
 
   /* ================= REALTIME ================= */
 
@@ -87,16 +94,15 @@ export default function GridSection({
     page * PAGE_SIZE
   );
 
-  /* ================= BOX CLICK (UPDATED) ================= */
+  /* ================= BOX CLICK ================= */
 
   const handleBoxClick = (boxNumber: number) => {
     setSelected((prev) => {
-      // remove if already selected
       if (prev.includes(boxNumber)) {
         return prev.filter((n) => n !== boxNumber);
       }
 
-      // 🔒 enforce offer limit
+      // 🔒 enforce max selectable
       if (maxSelectable && prev.length >= maxSelectable) {
         return prev;
       }

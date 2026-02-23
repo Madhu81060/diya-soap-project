@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { CheckCircle, Loader2, ArrowLeft } from "lucide-react";
 
 const API_BASE = "https://diya-backenddiya-backend.onrender.com";
@@ -11,6 +11,27 @@ interface RegistrationModalProps {
 }
 
 type PackType = "NORMAL" | "HALF_YEAR" | "ANNUAL";
+
+const PACK_CONFIG = {
+  NORMAL: {
+    label: "Regular Box",
+    boxesPerPack: 1,
+    soapsPerPack: 3,
+    pricePerPack: 600,
+  },
+  HALF_YEAR: {
+    label: "Half-Yearly Pack",
+    boxesPerPack: 1,
+    soapsPerPack: 6,
+    pricePerPack: 900,
+  },
+  ANNUAL: {
+    label: "Annual Pack",
+    boxesPerPack: 2,
+    soapsPerPack: 12,
+    pricePerPack: 1188,
+  },
+};
 
 export default function RegistrationModal({
   selectedBoxes,
@@ -26,22 +47,24 @@ export default function RegistrationModal({
 
   /* ================= PACK TYPE ================= */
   useEffect(() => {
-    if (offerPack === "HALF_YEAR") {
-      setPackType("HALF_YEAR");
-    } else if (offerPack === "ANNUAL") {
-      setPackType("ANNUAL");
-    } else {
-      setPackType("NORMAL");
-    }
+    if (offerPack === "HALF_YEAR") setPackType("HALF_YEAR");
+    else if (offerPack === "ANNUAL") setPackType("ANNUAL");
+    else setPackType("NORMAL");
   }, [offerPack]);
 
-  /* ================= PRICING ================= */
-  const totalPrice =
-    packType === "HALF_YEAR"
-      ? 900
-      : packType === "ANNUAL"
-      ? 1188
-      : selectedBoxes.length * 600;
+  /* ================= DERIVED VALUES ================= */
+
+  const pack = PACK_CONFIG[packType];
+
+  const noOfPacks = useMemo(() => {
+    if (!selectedBoxes.length) return 0;
+    return selectedBoxes.length / pack.boxesPerPack;
+  }, [selectedBoxes, pack.boxesPerPack]);
+
+  const totalSoaps = noOfPacks * pack.soapsPerPack;
+  const totalPrice = noOfPacks * pack.pricePerPack;
+
+  /* ================= FORM DATA ================= */
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -54,6 +77,7 @@ export default function RegistrationModal({
   });
 
   /* ================= LOCK SCROLL ================= */
+
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => {
@@ -62,6 +86,7 @@ export default function RegistrationModal({
   }, []);
 
   /* ================= LOAD RAZORPAY ================= */
+
   useEffect(() => {
     if ((window as any).Razorpay) return;
     const script = document.createElement("script");
@@ -70,21 +95,18 @@ export default function RegistrationModal({
     document.body.appendChild(script);
   }, []);
 
-  /* ================= VALIDATION (UPDATED) ================= */
+  /* ================= VALIDATION ================= */
+
   const validateForm = () => {
     if (!selectedBoxes.length) {
       setErrorMsg("No boxes selected");
       return false;
     }
 
-    // 🔒 OFFER RULE ENFORCEMENT
-    if (packType === "HALF_YEAR" && selectedBoxes.length !== 1) {
-      setErrorMsg("Half Year Pack requires exactly 1 box");
-      return false;
-    }
-
-    if (packType === "ANNUAL" && selectedBoxes.length !== 2) {
-      setErrorMsg("Annual Pack requires exactly 2 boxes");
+    if (selectedBoxes.length % pack.boxesPerPack !== 0) {
+      setErrorMsg(
+        `${pack.label} requires ${pack.boxesPerPack} box(es) per pack`
+      );
       return false;
     }
 
@@ -104,6 +126,7 @@ export default function RegistrationModal({
   };
 
   /* ================= SUBMIT ================= */
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
@@ -112,22 +135,9 @@ export default function RegistrationModal({
     setLoading(true);
 
     try {
-      const reserve = await fetch(`${API_BASE}/reserve-boxes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ boxes: selectedBoxes }),
-      });
-
-      if (!reserve.ok) {
-        setErrorMsg("Selected boxes already booked");
-        setLoading(false);
-        return;
-      }
-
       const newOrderId = "DSP" + Date.now().toString().slice(-8);
       setOrderId(newOrderId);
       onSuccess(newOrderId);
-
       await startPayment(newOrderId);
     } catch {
       setErrorMsg("Something went wrong");
@@ -136,6 +146,7 @@ export default function RegistrationModal({
   };
 
   /* ================= PAYMENT ================= */
+
   const startPayment = async (newOrderId: string) => {
     try {
       const res = await fetch(`${API_BASE}/create-order`, {
@@ -144,7 +155,6 @@ export default function RegistrationModal({
         body: JSON.stringify({
           boxes: selectedBoxes,
           packType,
-          amount: totalPrice,
         }),
       });
 
@@ -174,7 +184,6 @@ export default function RegistrationModal({
               razorpay_signature: response.razorpay_signature,
               boxes: selectedBoxes,
               packType,
-              amount: totalPrice,
               ...formData,
               orderId: newOrderId,
             }),
@@ -200,6 +209,7 @@ export default function RegistrationModal({
   };
 
   /* ================= SUCCESS ================= */
+
   if (paymentSuccess) {
     return (
       <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
@@ -207,8 +217,10 @@ export default function RegistrationModal({
           <CheckCircle size={70} className="mx-auto text-green-500 mb-3" />
           <h2 className="text-2xl font-bold">Booking Successful</h2>
           <p><b>Order ID:</b> {orderId}</p>
-          <p><b>Selected Boxes:</b> {selectedBoxes.join(", ")}</p>
-          <p><b>Pack:</b> {packType}</p>
+          <p><b>Package:</b> {pack.label}</p>
+          <p><b>No. of Packs:</b> {noOfPacks}</p>
+          <p><b>Total Boxes:</b> {selectedBoxes.length}</p>
+          <p><b>Total Soaps:</b> {totalSoaps}</p>
           <p className="font-bold text-green-600">₹{totalPrice}</p>
         </div>
       </div>
@@ -216,11 +228,11 @@ export default function RegistrationModal({
   }
 
   /* ================= FORM ================= */
+
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-4">
       <div className="bg-white max-w-md w-full rounded-2xl shadow-lg p-6 max-h-[90vh] overflow-y-auto">
 
-        {/* HEADER */}
         <div className="flex items-center gap-3 mb-4">
           <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100">
             <ArrowLeft />
@@ -228,13 +240,12 @@ export default function RegistrationModal({
           <h3 className="text-lg font-bold">Registration</h3>
         </div>
 
-        {/* SUMMARY */}
         <div className="p-3 rounded bg-yellow-100 border text-sm font-semibold mb-2">
-          Selected Boxes: {selectedBoxes.join(", ")}
+          {pack.label} | Packs: {noOfPacks} | Boxes: {selectedBoxes.length}
         </div>
 
         <div className="p-2 rounded bg-blue-100 text-blue-800 text-sm font-bold mb-4">
-          Purchase Type: {packType} | Amount: ₹{totalPrice}
+          Total Soaps: {totalSoaps} | Amount: ₹{totalPrice}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">

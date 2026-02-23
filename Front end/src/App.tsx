@@ -33,10 +33,20 @@ import RefundPolicy from "./pages/RefundPolicy";
 import ShippingPolicy from "./pages/ShippingPolicy";
 import ContactPage from "./pages/ContactPage";
 
+/* 🔥 PACK CONFIG – SINGLE SOURCE OF TRUTH */
+const PACK_CONFIG = {
+  NORMAL: { boxesPerPack: 1, price: 600 },
+  HALF_YEAR: { boxesPerPack: 1, price: 900 },
+  ANNUAL: { boxesPerPack: 2, price: 1188 },
+};
+
 function LandingPage() {
   const [selectedBoxes, setSelectedBoxes] = useState<number[]>([]);
   const [offerPack, setOfferPack] =
     useState<"HALF_YEAR" | "ANNUAL" | null>(null);
+
+  // 🔥 NEW: quantity from ShopSection
+  const [quantity, setQuantity] = useState(1);
 
   useScrollReveal();
 
@@ -76,15 +86,21 @@ function LandingPage() {
     }
   };
 
-  /* 🔥 SHOP → OFFER HANDLER */
+  /* 🔥 SHOP → OFFER + QUANTITY HANDLER */
   const handleBuyFromShop = (
-    boxes: number[],
-    offer: "HALF_YEAR" | "ANNUAL" | null
+    offer: "HALF_YEAR" | "ANNUAL" | null,
+    qty: number
   ) => {
-    setSelectedBoxes([]); // reset previous
-    setOfferPack(offer); // 🔥 IMPORTANT
+    setSelectedBoxes([]);        // reset previous selection
+    setOfferPack(offer);         // set offer
+    setQuantity(qty);            // 🔥 store quantity
     handleNavigate("grid");
   };
+
+  /* 🔥 DERIVED GRID RULES */
+  const packKey = offerPack ?? "NORMAL";
+  const boxesPerPack = PACK_CONFIG[packKey].boxesPerPack;
+  const maxSelectable = boxesPerPack * quantity;
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -111,19 +127,15 @@ function LandingPage() {
       <div id="grid" ref={gridRef} className="reveal">
         <GridSection
           onBoxesSelected={(boxes) => setSelectedBoxes(boxes)}
-          maxSelectable={
-            offerPack === "HALF_YEAR"
-              ? 1
-              : offerPack === "ANNUAL"
-              ? 2
-              : undefined
-          }
+          maxSelectable={maxSelectable}
           instruction={
-            offerPack === "HALF_YEAR"
-              ? "Half Yearly Pack selected – Please select 1 box only (₹900)"
-              : offerPack === "ANNUAL"
-              ? "Annual Pack selected – Please select 2 boxes only (₹1188)"
-              : "Select your boxes"
+            offerPack
+              ? `${offerPack.replace("_", " ")} Pack selected – Please select exactly ${maxSelectable} box${
+                  maxSelectable > 1 ? "es" : ""
+                }`
+              : `Select ${maxSelectable} box${
+                  maxSelectable > 1 ? "es" : ""
+                }`
           }
         />
       </div>
@@ -154,6 +166,7 @@ function LandingPage() {
           onClose={() => {
             setSelectedBoxes([]);
             setOfferPack(null);
+            setQuantity(1);
           }}
           onSuccess={() => {}}
         />

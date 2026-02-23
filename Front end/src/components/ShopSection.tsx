@@ -2,10 +2,10 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
 interface ShopProps {
-  // number of boxes + offer pack
+  // 🔥 send offer + quantity
   onBuy: (
-    boxes: number[],
-    offer: "HALF_YEAR" | "ANNUAL" | null
+    offer: "HALF_YEAR" | "ANNUAL" | null,
+    quantity: number
   ) => void;
 }
 
@@ -18,6 +18,11 @@ const BACKEND_URL =
 const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
   const [members, setMembers] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // 🔥 SEPARATE quantity states (IMPORTANT FIX)
+  const [singleQty, setSingleQty] = useState(1);
+  const [halfYearQty, setHalfYearQty] = useState(1);
+  const [annualQty, setAnnualQty] = useState(1);
 
   /* ================= FETCH MEMBERS ================= */
 
@@ -39,20 +44,19 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
     fetchMembers();
   }, []);
 
-  /* ================= BUY CLICK (UPDATED) ================= */
+  /* ================= BUY CLICK ================= */
 
   const handleBuyClick = (
-    boxCount: number,
     offer: "HALF_YEAR" | "ANNUAL" | null
   ) => {
-    // 🔥 auto select boxes (dummy placeholders – grid handles real numbers)
-    const autoBoxes = Array.from(
-      { length: boxCount },
-      (_, i) => i + 1
-    );
+    const quantity =
+      offer === "HALF_YEAR"
+        ? halfYearQty
+        : offer === "ANNUAL"
+        ? annualQty
+        : singleQty;
 
-    // send to parent → Grid + Registration
-    onBuy(autoBoxes, offer);
+    onBuy(offer, quantity);
 
     // scroll to grid
     const grid = document.getElementById("grid");
@@ -94,41 +98,75 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
           </ul>
 
           <p className="text-3xl font-bold text-amber-800 mt-6">
-            ₹600
+            ₹600 × {singleQty} = ₹{600 * singleQty}
           </p>
 
+          {/* quantity */}
+          <div className="flex items-center gap-4 mt-4">
+            <button
+              onClick={() => setSingleQty(q => Math.max(1, q - 1))}
+              className="px-4 py-2 bg-gray-200 rounded-lg font-bold"
+            >
+              −
+            </button>
+            <span className="font-bold text-lg">{singleQty}</span>
+            <button
+              onClick={() => setSingleQty(q => q + 1)}
+              className="px-4 py-2 bg-gray-200 rounded-lg font-bold"
+            >
+              +
+            </button>
+          </div>
+
           <button
-            onClick={() => handleBuyClick(1, null)}
+            onClick={() => handleBuyClick(null)}
             className="w-full mt-4 bg-orange-600 text-white py-3 rounded-xl font-bold hover:bg-orange-700"
           >
-            Buy 1 Box
+            Buy Boxes
           </button>
         </div>
 
-        {/* HALF YEAR – 1 BOX */}
+        {/* HALF YEAR */}
         <div className="bg-white p-8 rounded-2xl shadow-lg border">
           <h3 className="text-2xl font-bold text-amber-700 mb-4">
             ⭐ Half Yearly Pack
           </h3>
 
           <ul className="space-y-2 text-gray-700">
-            <li>✔ 6 Soaps (1 Box)</li>
+            <li>✔ 6 Soaps (1 Box / Pack)</li>
             <li>✔ Offer Price</li>
           </ul>
 
           <p className="text-3xl font-bold text-amber-800 mt-6">
-            ₹900
+            ₹900 × {halfYearQty} = ₹{900 * halfYearQty}
           </p>
 
+          {/* quantity */}
+          <div className="flex items-center gap-4 mt-4">
+            <button
+              onClick={() => setHalfYearQty(q => Math.max(1, q - 1))}
+              className="px-4 py-2 bg-gray-200 rounded-lg font-bold"
+            >
+              −
+            </button>
+            <span className="font-bold text-lg">{halfYearQty}</span>
+            <button
+              onClick={() => setHalfYearQty(q => q + 1)}
+              className="px-4 py-2 bg-gray-200 rounded-lg font-bold"
+            >
+              +
+            </button>
+          </div>
+
           <button
-            onClick={() => handleBuyClick(1, "HALF_YEAR")}
+            onClick={() => handleBuyClick("HALF_YEAR")}
             className="w-full mt-4 bg-orange-600 text-white py-3 rounded-xl font-bold hover:bg-orange-700"
           >
             Buy Half Yearly
           </button>
         </div>
 
-        {/* ANNUAL – 2 BOXES */}
+        {/* ANNUAL */}
         <div className="bg-yellow-400 p-8 rounded-2xl shadow-xl border relative">
 
           <span className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full text-sm font-bold">
@@ -140,21 +178,35 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
           </h3>
 
           <ul className="space-y-2">
-            <li>✔ 12 Soaps (2 Boxes)</li>
+            <li>✔ 12 Soaps (2 Boxes / Pack)</li>
             <li>✔ Maximum Savings</li>
           </ul>
 
           <p className="mt-6">
-            <span className="line-through mr-2">
-              ₹2400
-            </span>
             <span className="text-3xl font-bold">
-              ₹1188
+              ₹1188 × {annualQty} = ₹{1188 * annualQty}
             </span>
           </p>
 
+          {/* quantity */}
+          <div className="flex items-center gap-4 mt-4">
+            <button
+              onClick={() => setAnnualQty(q => Math.max(1, q - 1))}
+              className="px-4 py-2 bg-white rounded-lg font-bold"
+            >
+              −
+            </button>
+            <span className="font-bold text-lg">{annualQty}</span>
+            <button
+              onClick={() => setAnnualQty(q => q + 1)}
+              className="px-4 py-2 bg-white rounded-lg font-bold"
+            >
+              +
+            </button>
+          </div>
+
           <button
-            onClick={() => handleBuyClick(2, "ANNUAL")}
+            onClick={() => handleBuyClick("ANNUAL")}
             className="w-full mt-4 bg-white text-black py-3 rounded-xl font-bold hover:bg-gray-100"
           >
             Buy Annual Pack
@@ -165,15 +217,6 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
 
       {/* LUCKY DRAW */}
       <div className="max-w-4xl mx-auto mt-16 bg-white p-8 rounded-3xl shadow-lg text-center">
-        <h3 className="text-2xl font-bold text-amber-700 mb-4">
-          🎁 Gold Lucky Draw Offer
-        </h3>
-
-        <p className="text-lg mb-4">
-          Every <b>250 members</b> → 1 Winner gets
-          <b> 1g Gold Coin</b>
-        </p>
-
         <motion.div
           animate={{ scale: [1, 1.03, 1] }}
           transition={{ repeat: Infinity, duration: 2 }}
