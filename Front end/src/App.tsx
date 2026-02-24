@@ -37,7 +37,7 @@ import ContactPage from "./pages/ContactPage";
 const PACK_CONFIG = {
   NORMAL: { boxesPerPack: 1, price: 600 },
   HALF_YEAR: { boxesPerPack: 1, price: 900 },
-  ANNUAL: { boxesPerPack: 2, price: 1188 },
+  ANNUAL: { boxesPerPack: 1, price: 1188 }, // ✅ FIXED (1 box only)
 };
 
 function LandingPage() {
@@ -45,7 +45,7 @@ function LandingPage() {
   const [offerPack, setOfferPack] =
     useState<"HALF_YEAR" | "ANNUAL" | null>(null);
 
-  // 🔥 NEW: quantity from ShopSection
+  // 🔥 quantity from ShopSection
   const [quantity, setQuantity] = useState(1);
 
   useScrollReveal();
@@ -91,9 +91,9 @@ function LandingPage() {
     offer: "HALF_YEAR" | "ANNUAL" | null,
     qty: number
   ) => {
-    setSelectedBoxes([]);        // reset previous selection
-    setOfferPack(offer);         // set offer
-    setQuantity(qty);            // 🔥 store quantity
+    setSelectedBoxes([]); // reset previous selection
+    setOfferPack(offer);  // set offer
+    setQuantity(qty);     // store quantity
     handleNavigate("grid");
   };
 
@@ -118,12 +118,12 @@ function LandingPage() {
         />
       </div>
 
-      {/* 🔥 SHOP SECTION */}
+      {/* SHOP */}
       <div id="shop" ref={shopRef} className="reveal">
         <ShopSection onBuy={handleBuyFromShop} />
       </div>
 
-      {/* 🔥 GRID SECTION */}
+      {/* GRID */}
       <div id="grid" ref={gridRef} className="reveal">
         <GridSection
           onBoxesSelected={(boxes) => setSelectedBoxes(boxes)}
@@ -158,7 +158,7 @@ function LandingPage() {
 
       <Footer />
 
-      {/* 🔥 REGISTRATION MODAL */}
+      {/* REGISTRATION MODAL */}
       {selectedBoxes.length > 0 && (
         <RegistrationModal
           selectedBoxes={selectedBoxes}

@@ -2,7 +2,12 @@ import { useSlots } from "../context/SlotContext";
 import heroSoap from "../assets/diya-soap.png";
 import cowImg from "../assets/cow.png";
 
-export default function HeroSection() {
+/* ✅ PROPS TYPE */
+interface HeroSectionProps {
+  onJoinClick: () => void;
+}
+
+export default function HeroSection({ onJoinClick }: HeroSectionProps) {
   const { booked, total } = useSlots();
 
   const available = total - booked;
@@ -54,12 +59,13 @@ export default function HeroSection() {
               </p>
             </div>
 
-            <a
-              href="#grid"
+            {/* ✅ FIXED BUTTON */}
+            <button
+              onClick={onJoinClick}
               className="inline-block px-7 py-3 rounded-full bg-gradient-to-r from-[#d97706] to-[#b45309] text-white font-bold shadow-lg hover:scale-105 transition text-sm sm:text-base"
             >
               Book Your Soaps Box ₹600
-            </a>
+            </button>
 
           </div>
 

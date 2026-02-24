@@ -12,6 +12,7 @@ interface RegistrationModalProps {
 
 type PackType = "NORMAL" | "HALF_YEAR" | "ANNUAL";
 
+/* ================= PACK CONFIG ================= */
 const PACK_CONFIG = {
   NORMAL: {
     label: "Regular Box",
@@ -27,7 +28,7 @@ const PACK_CONFIG = {
   },
   ANNUAL: {
     label: "Annual Pack",
-    boxesPerPack: 2,
+    boxesPerPack: 1,        // ✅ FIXED (1 box = 12 soaps)
     soapsPerPack: 12,
     pricePerPack: 1188,
   },
@@ -53,7 +54,6 @@ export default function RegistrationModal({
   }, [offerPack]);
 
   /* ================= DERIVED VALUES ================= */
-
   const pack = PACK_CONFIG[packType];
 
   const noOfPacks = useMemo(() => {
@@ -65,7 +65,6 @@ export default function RegistrationModal({
   const totalPrice = noOfPacks * pack.pricePerPack;
 
   /* ================= FORM DATA ================= */
-
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -77,7 +76,6 @@ export default function RegistrationModal({
   });
 
   /* ================= LOCK SCROLL ================= */
-
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => {
@@ -86,7 +84,6 @@ export default function RegistrationModal({
   }, []);
 
   /* ================= LOAD RAZORPAY ================= */
-
   useEffect(() => {
     if ((window as any).Razorpay) return;
     const script = document.createElement("script");
@@ -96,7 +93,6 @@ export default function RegistrationModal({
   }, []);
 
   /* ================= VALIDATION ================= */
-
   const validateForm = () => {
     if (!selectedBoxes.length) {
       setErrorMsg("No boxes selected");
@@ -126,7 +122,6 @@ export default function RegistrationModal({
   };
 
   /* ================= SUBMIT ================= */
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
@@ -146,7 +141,6 @@ export default function RegistrationModal({
   };
 
   /* ================= PAYMENT ================= */
-
   const startPayment = async (newOrderId: string) => {
     try {
       const res = await fetch(`${API_BASE}/create-order`, {
@@ -209,7 +203,6 @@ export default function RegistrationModal({
   };
 
   /* ================= SUCCESS ================= */
-
   if (paymentSuccess) {
     return (
       <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
@@ -228,7 +221,6 @@ export default function RegistrationModal({
   }
 
   /* ================= FORM ================= */
-
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-4">
       <div className="bg-white max-w-md w-full rounded-2xl shadow-lg p-6 max-h-[90vh] overflow-y-auto">

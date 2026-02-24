@@ -7,7 +7,7 @@ import { Loader2, Sparkles } from "lucide-react";
 interface GridSectionProps {
   onBoxesSelected: (boxes: number[]) => void;
   instruction?: string;
-  maxSelectable?: number; // ✅ NEW
+  maxSelectable?: number; // ✅ controlled from App.tsx
 }
 
 const PAGE_SIZE = 125;

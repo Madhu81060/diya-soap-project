@@ -178,7 +178,7 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
           </h3>
 
           <ul className="space-y-2">
-            <li>✔ 12 Soaps (2 Boxes / Pack)</li>
+            <li>✔ 12 Soaps (1 Box / Pack)</li>
             <li>✔ Maximum Savings</li>
           </ul>
 
