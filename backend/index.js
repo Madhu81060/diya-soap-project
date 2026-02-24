@@ -32,12 +32,12 @@ const razorpay = new Razorpay({
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-/* ================= PACKAGE HELPER (✅ FINAL FIX) ================= */
+/* ================= PACKAGE HELPER ================= */
 /**
- * FINAL LOCKED RULES
- * NORMAL     : 1 box → 3 soaps  → ₹600
- * HALF_YEAR  : 1 box → 6 soaps  → ₹900
- * ANNUAL     : 1 box → 12 soaps → ₹1188
+ * FINAL BUSINESS RULES
+ * NORMAL    : 1 box → 3 soaps  → ₹600
+ * HALF_YEAR : 1 box → 6 soaps  → ₹900
+ * ANNUAL    : 1 box → 12 soaps → ₹1188
  */
 function getPackageDetails(boxes, packType) {
   const boxCount = boxes.length;
@@ -55,12 +55,11 @@ function getPackageDetails(boxes, packType) {
     return {
       label: "Annual Pack",
       boxes: boxCount,
-      soaps: boxCount * 12,   // ✅ FIXED
-      price: boxCount * 1188, // ✅ FIXED
+      soaps: boxCount * 12,
+      price: boxCount * 1188,
     };
   }
 
-  // NORMAL
   return {
     label: "Regular Box",
     boxes: boxCount,
@@ -77,12 +76,12 @@ app.get("/", (req, res) => {
 /* ================= AUTO RELEASE RESERVED ================= */
 const releaseExpiredReservations = async () => {
   try {
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const time = new Date(Date.now() - 5 * 60 * 1000).toISOString();
     await supabase
       .from("grid_boxes")
       .update({ status: "available", reserved_at: null })
       .eq("status", "reserved")
-      .lt("reserved_at", fiveMinutesAgo);
+      .lt("reserved_at", time);
   } catch (err) {
     console.error("Auto release error:", err);
   }
@@ -147,6 +146,7 @@ app.post("/verify-payment", async (req, res) => {
       orderId,
     } = req.body;
 
+    /* ── VERIFY SIGNATURE ── */
     const body = razorpay_order_id + "|" + razorpay_payment_id;
     const expected = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
@@ -159,6 +159,7 @@ app.post("/verify-payment", async (req, res) => {
 
     const pkg = getPackageDetails(boxes, packType);
 
+    /* ── MARK BOXES BOOKED ── */
     for (const box of boxes) {
       await supabase
         .from("grid_boxes")
@@ -166,6 +167,7 @@ app.post("/verify-payment", async (req, res) => {
         .eq("box_number", box);
     }
 
+    /* ── INSERT MEMBER ── */
     await supabase.from("members").insert({
       order_id: orderId,
       box_number: boxes.join(", "),
@@ -184,6 +186,7 @@ app.post("/verify-payment", async (req, res) => {
       created_at: new Date().toISOString(),
     });
 
+    /* ── CUSTOMER EMAIL ── */
     await resend.emails.send({
       from: "Diya Soaps <support@diyasoaps.com>",
       to: email,
@@ -193,11 +196,33 @@ app.post("/verify-payment", async (req, res) => {
         <p><b>Package:</b> ${pkg.label}</p>
         <p><b>Boxes:</b> ${boxes.join(", ")}</p>
         <p><b>Soaps:</b> ${pkg.soaps}</p>
+        <p><b>Amount Paid:</b> ₹${pkg.price}</p>
+      `,
+    });
+
+    /* ── OWNER EMAIL ── */
+    await resend.emails.send({
+      from: "Diya Soaps <support@diyasoaps.com>",
+      to: "diyasoapbusiness@gmail.com",
+      subject: `🔔 New Order Received | ${orderId}`,
+      html: `
+        <h2>New Order Received</h2>
+        <p><b>Name:</b> ${fullName}</p>
+        <p><b>Phone:</b> ${mobile}</p>
+        <p><b>Email:</b> ${email}</p>
+        <hr/>
+        <p><b>Package:</b> ${pkg.label}</p>
+        <p><b>Boxes:</b> ${boxes.join(", ")}</p>
+        <p><b>Soaps:</b> ${pkg.soaps}</p>
         <p><b>Amount:</b> ₹${pkg.price}</p>
+        <hr/>
+        <p><b>Address:</b></p>
+        <p>${houseNo}, ${street}, ${city} - ${pincode}</p>
       `,
     });
 
     res.json({ success: true });
+
   } catch (err) {
     console.error("Verify payment error:", err);
     res.status(500).json({ error: "Verification failed" });
