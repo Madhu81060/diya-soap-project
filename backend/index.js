@@ -34,8 +34,8 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 /* ================= PACKAGE HELPER ================= */
 /**
- * TESTING MODE
- * NORMAL    : 1 box → 3 soaps  → ₹1   ✅
+ * PRODUCTION MODE (ORIGINAL PRICES)
+ * NORMAL    : 1 box → 3 soaps  → ₹600 ✅
  * HALF_YEAR : 1 box → 6 soaps  → ₹900
  * ANNUAL    : 1 box → 12 soaps → ₹1188
  */
@@ -58,11 +58,11 @@ function getPackageDetails(boxes, packType) {
     };
   }
 
-  // ✅ ONLY THIS LINE CHANGED (600 → 1)
+  // ✅ BACK TO ORIGINAL (600)
   return {
     label: "Regular Box",
     soaps: boxCount * 3,
-    price: boxCount * 1,
+    price: boxCount * 600,
   };
 }
 
@@ -83,7 +83,7 @@ app.post("/create-order", async (req, res) => {
     const pkg = getPackageDetails(boxes, packType);
 
     const order = await razorpay.orders.create({
-      amount: pkg.price * 100, // ₹1 = 100 paise
+      amount: pkg.price * 100, // ₹600 → 60000 paise
       currency: "INR",
       receipt: "order_" + Date.now(),
     });
