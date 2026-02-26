@@ -269,8 +269,8 @@
 //     </div>
 //   );
 // }
-import { useState, useEffect, useMemo } from "react";
-import { CheckCircle, Loader2, ArrowLeft } from "lucide-react";
+import { useState, useEffect } from "react";
+import { CheckCircle, Loader2, X } from "lucide-react";
 
 const API_BASE = "https://diya-backenddiya-backend.onrender.com";
 
@@ -287,19 +287,16 @@ type PackType = "NORMAL" | "HALF_YEAR" | "ANNUAL";
 const PACK_CONFIG = {
   NORMAL: {
     label: "Regular Box",
-    boxesPerPack: 1,
     soapsPerPack: 3,
-    pricePerPack: 1, // ✅ testing
+    pricePerPack: 1, // testing
   },
   HALF_YEAR: {
     label: "Half-Yearly Pack",
-    boxesPerPack: 1,
     soapsPerPack: 6,
     pricePerPack: 900,
   },
   ANNUAL: {
     label: "Annual Pack",
-    boxesPerPack: 1,
     soapsPerPack: 12,
     pricePerPack: 1188,
   },
@@ -324,16 +321,11 @@ export default function RegistrationModal({
     else setPackType("NORMAL");
   }, [offerPack]);
 
-  /* ================= DERIVED VALUES ================= */
   const pack = PACK_CONFIG[packType];
 
-  const noOfPacks = useMemo(() => {
-    if (!selectedBoxes.length) return 0;
-    return selectedBoxes.length / pack.boxesPerPack;
-  }, [selectedBoxes, pack.boxesPerPack]);
-
-  const totalSoaps = noOfPacks * pack.soapsPerPack;
-  const totalPrice = noOfPacks * pack.pricePerPack;
+  const totalBoxes = selectedBoxes.length;
+  const totalSoaps = totalBoxes * pack.soapsPerPack;
+  const totalPrice = totalBoxes * pack.pricePerPack;
 
   /* ================= FORM DATA ================= */
   const [formData, setFormData] = useState({
@@ -358,9 +350,8 @@ export default function RegistrationModal({
   /* ================= SUBMIT ================= */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg("");
-
     setLoading(true);
+
     try {
       const newOrderId = "DSP" + Date.now().toString().slice(-8);
       setOrderId(newOrderId);
@@ -400,10 +391,7 @@ export default function RegistrationModal({
           contact: formData.mobile,
         },
         theme: { color: "#d97706" },
-
         handler: async (response: any) => {
-          console.log("RAZORPAY RESPONSE:", response); // ✅ DEBUG
-
           const verify = await fetch(`${API_BASE}/verify-payment`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -419,8 +407,6 @@ export default function RegistrationModal({
           });
 
           if (!verify.ok) {
-            const err = await verify.json();
-            console.error("VERIFY FAILED:", err); // ✅ DEBUG
             setErrorMsg("Payment verification failed");
             setLoading(false);
             return;
@@ -428,7 +414,7 @@ export default function RegistrationModal({
 
           setPaymentSuccess(true);
           setLoading(false);
-          setTimeout(onClose, 5000);
+          setTimeout(onClose, 4000);
         },
       });
 
@@ -443,13 +429,13 @@ export default function RegistrationModal({
   if (paymentSuccess) {
     return (
       <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
-        <div className="bg-white max-w-lg w-full mx-4 p-8 rounded-2xl text-center">
-          <CheckCircle size={70} className="mx-auto text-green-500 mb-3" />
-          <h2 className="text-2xl font-bold">Booking Successful</h2>
-          <p><b>Order ID:</b> {orderId}</p>
-          <p><b>Package:</b> {pack.label}</p>
-          <p><b>Total Boxes:</b> {selectedBoxes.length}</p>
-          <p><b>Total Soaps:</b> {totalSoaps}</p>
+        <div className="bg-white max-w-md w-full p-6 rounded-2xl text-center">
+          <CheckCircle size={64} className="mx-auto text-green-500 mb-3" />
+          <h2 className="text-xl font-bold">Booking Successful</h2>
+          <p className="mt-2">Order ID: <b>{orderId}</b></p>
+          <p>{pack.label}</p>
+          <p>Total Boxes: {totalBoxes}</p>
+          <p>Total Soaps: {totalSoaps}</p>
           <p className="font-bold text-green-600">₹{totalPrice}</p>
         </div>
       </div>
@@ -458,9 +444,42 @@ export default function RegistrationModal({
 
   /* ================= FORM ================= */
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-4">
-      <div className="bg-white max-w-md w-full rounded-2xl shadow-lg p-6">
-        <form onSubmit={handleSubmit} className="space-y-3">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-3">
+      <div className="bg-white w-full max-w-md rounded-2xl shadow-lg max-h-[90vh] overflow-y-auto relative">
+
+        {/* CLOSE BUTTON */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 text-gray-500 hover:text-black"
+        >
+          <X />
+        </button>
+
+        {/* SELECTED DETAILS */}
+        <div className="p-4 border-b bg-amber-50 text-sm">
+          <h3 className="font-bold text-lg mb-2">Selected Details</h3>
+
+          <p><b>Package:</b> {pack.label}</p>
+          <p><b>No. of Boxes:</b> {totalBoxes}</p>
+          <p><b>Selected Box Numbers:</b></p>
+
+          <div className="flex flex-wrap gap-2 mt-1">
+            {selectedBoxes.map((box) => (
+              <span
+                key={box}
+                className="px-2 py-1 bg-yellow-200 rounded text-xs font-bold"
+              >
+                {String(box).padStart(3, "0")}
+              </span>
+            ))}
+          </div>
+
+          <p className="mt-2"><b>Total Soaps:</b> {totalSoaps}</p>
+          <p className="font-bold text-green-700">Amount: ₹{totalPrice}</p>
+        </div>
+
+        {/* FORM */}
+        <form onSubmit={handleSubmit} className="p-4 space-y-3">
           {Object.keys(formData).map((field) => (
             <input
               key={field}
@@ -473,16 +492,18 @@ export default function RegistrationModal({
           ))}
 
           {errorMsg && (
-            <p className="text-red-600 text-sm font-semibold text-center">
-              {errorMsg}
-            </p>
+            <p className="text-red-600 text-sm text-center">{errorMsg}</p>
           )}
 
           <button
             disabled={loading}
             className="bg-amber-600 text-white py-2 w-full rounded-xl font-bold"
           >
-            {loading ? <Loader2 className="animate-spin" /> : "Register & Pay"}
+            {loading ? (
+              <Loader2 className="animate-spin mx-auto" />
+            ) : (
+              "Register & Pay"
+            )}
           </button>
         </form>
       </div>
