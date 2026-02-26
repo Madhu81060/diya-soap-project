@@ -289,7 +289,7 @@ const PACK_CONFIG = {
     label: "Regular Box",
     boxesPerPack: 1,
     soapsPerPack: 3,
-    pricePerPack: 1, // ✅ ONLY CHANGE (600 → 1) testing purpose
+    pricePerPack: 1, // ✅ testing
   },
   HALF_YEAR: {
     label: "Half-Yearly Pack",
@@ -346,14 +346,6 @@ export default function RegistrationModal({
     pincode: "",
   });
 
-  /* ================= LOCK SCROLL ================= */
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "auto";
-    };
-  }, []);
-
   /* ================= LOAD RAZORPAY ================= */
   useEffect(() => {
     if ((window as any).Razorpay) return;
@@ -363,43 +355,12 @@ export default function RegistrationModal({
     document.body.appendChild(script);
   }, []);
 
-  /* ================= VALIDATION ================= */
-  const validateForm = () => {
-    if (!selectedBoxes.length) {
-      setErrorMsg("No boxes selected");
-      return false;
-    }
-
-    if (selectedBoxes.length % pack.boxesPerPack !== 0) {
-      setErrorMsg(
-        `${pack.label} requires ${pack.boxesPerPack} box(es) per pack`
-      );
-      return false;
-    }
-
-    if (!/^[0-9]{10}$/.test(formData.mobile)) {
-      setErrorMsg("Invalid mobile number");
-      return false;
-    }
-
-    for (const key in formData) {
-      if (!(formData as any)[key].trim()) {
-        setErrorMsg("Please fill all fields");
-        return false;
-      }
-    }
-
-    return true;
-  };
-
   /* ================= SUBMIT ================= */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
-    if (!validateForm()) return;
 
     setLoading(true);
-
     try {
       const newOrderId = "DSP" + Date.now().toString().slice(-8);
       setOrderId(newOrderId);
@@ -439,7 +400,10 @@ export default function RegistrationModal({
           contact: formData.mobile,
         },
         theme: { color: "#d97706" },
+
         handler: async (response: any) => {
+          console.log("RAZORPAY RESPONSE:", response); // ✅ DEBUG
+
           const verify = await fetch(`${API_BASE}/verify-payment`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -455,6 +419,8 @@ export default function RegistrationModal({
           });
 
           if (!verify.ok) {
+            const err = await verify.json();
+            console.error("VERIFY FAILED:", err); // ✅ DEBUG
             setErrorMsg("Payment verification failed");
             setLoading(false);
             return;
@@ -482,7 +448,6 @@ export default function RegistrationModal({
           <h2 className="text-2xl font-bold">Booking Successful</h2>
           <p><b>Order ID:</b> {orderId}</p>
           <p><b>Package:</b> {pack.label}</p>
-          <p><b>No. of Packs:</b> {noOfPacks}</p>
           <p><b>Total Boxes:</b> {selectedBoxes.length}</p>
           <p><b>Total Soaps:</b> {totalSoaps}</p>
           <p className="font-bold text-green-600">₹{totalPrice}</p>
@@ -494,22 +459,7 @@ export default function RegistrationModal({
   /* ================= FORM ================= */
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-4">
-      <div className="bg-white max-w-md w-full rounded-2xl shadow-lg p-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center gap-3 mb-4">
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100">
-            <ArrowLeft />
-          </button>
-          <h3 className="text-lg font-bold">Registration</h3>
-        </div>
-
-        <div className="p-3 rounded bg-yellow-100 border text-sm font-semibold mb-2">
-          {pack.label} | Packs: {noOfPacks} | Boxes: {selectedBoxes.length}
-        </div>
-
-        <div className="p-2 rounded bg-blue-100 text-blue-800 text-sm font-bold mb-4">
-          Total Soaps: {totalSoaps} | Amount: ₹{totalPrice}
-        </div>
-
+      <div className="bg-white max-w-md w-full rounded-2xl shadow-lg p-6">
         <form onSubmit={handleSubmit} className="space-y-3">
           {Object.keys(formData).map((field) => (
             <input
@@ -530,7 +480,7 @@ export default function RegistrationModal({
 
           <button
             disabled={loading}
-            className="bg-amber-600 text-white py-2 w-full rounded-xl font-bold flex justify-center"
+            className="bg-amber-600 text-white py-2 w-full rounded-xl font-bold"
           >
             {loading ? <Loader2 className="animate-spin" /> : "Register & Pay"}
           </button>
