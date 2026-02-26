@@ -34,8 +34,8 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 /* ================= PACKAGE HELPER ================= */
 /**
- * ORIGINAL BUSINESS LOGIC (UNCHANGED)
- * NORMAL    : 1 box → 3 soaps  → ₹600
+ * TESTING MODE
+ * NORMAL    : 1 box → 3 soaps  → ₹1   ✅
  * HALF_YEAR : 1 box → 6 soaps  → ₹900
  * ANNUAL    : 1 box → 12 soaps → ₹1188
  */
@@ -58,10 +58,11 @@ function getPackageDetails(boxes, packType) {
     };
   }
 
+  // ✅ ONLY THIS LINE CHANGED (600 → 1)
   return {
     label: "Regular Box",
     soaps: boxCount * 3,
-    price: boxCount * 600,
+    price: boxCount * 1,
   };
 }
 
@@ -82,7 +83,7 @@ app.post("/create-order", async (req, res) => {
     const pkg = getPackageDetails(boxes, packType);
 
     const order = await razorpay.orders.create({
-      amount: pkg.price * 100,
+      amount: pkg.price * 100, // ₹1 = 100 paise
       currency: "INR",
       receipt: "order_" + Date.now(),
     });
@@ -153,7 +154,7 @@ app.post("/verify-payment", async (req, res) => {
       created_at: new Date().toISOString(),
     });
 
-    /* ================= CUSTOMER EMAIL (UPDATED & PROFESSIONAL) ================= */
+    /* ================= CUSTOMER EMAIL ================= */
     await resend.emails.send({
       from: "Diya Soaps <support@diyasoaps.com>",
       to: email,
@@ -161,11 +162,7 @@ app.post("/verify-payment", async (req, res) => {
       html: `
         <div style="font-family:Arial,sans-serif;line-height:1.6">
           <h2>Thank You for Choosing Diya Soaps, ${fullName}!</h2>
-
-          <p>
-            We are delighted to inform you that your payment was successful
-            and your order has been confirmed.
-          </p>
+          <p>Your payment was successful and your order is confirmed.</p>
 
           <h3>🧾 Order Details</h3>
           <table cellpadding="6">
@@ -176,48 +173,27 @@ app.post("/verify-payment", async (req, res) => {
             <tr><td><b>Amount Paid</b></td><td>₹${pkg.price}</td></tr>
           </table>
 
-          <p>
-            Thank you for trusting <b>Diya Soaps</b>.
-            We truly appreciate your support and hope you enjoy our
-            natural handmade soaps 🌿
-          </p>
-
-          <p>
-            Warm regards,<br/>
-            <b>Diya Soaps Team</b><br/>
-            Natural Care for Your Skin
-          </p>
+          <p>Warm regards,<br/><b>Diya Soaps Team</b></p>
         </div>
       `,
     });
 
-    /* ================= OWNER EMAIL (UPDATED & CLEAR) ================= */
+    /* ================= OWNER EMAIL ================= */
     await resend.emails.send({
       from: "Diya Soaps <support@diyasoaps.com>",
       to: "diyasoapbusiness@gmail.com",
       subject: `🛒 New Order Received | ${orderId}`,
       html: `
-        <div style="font-family:Arial,sans-serif;line-height:1.6">
+        <div style="font-family:Arial,sans-serif">
           <h2>New Order Received</h2>
-
-          <h3>👤 Customer Details</h3>
-          <p>
-            <b>Name:</b> ${fullName}<br/>
-            <b>Email:</b> ${email}<br/>
-            <b>Mobile:</b> ${mobile}
-          </p>
-
-          <h3>📦 Order Summary</h3>
-          <ul>
-            <li><b>Order ID:</b> ${orderId}</li>
-            <li><b>Package:</b> ${pkg.label}</li>
-            <li><b>Boxes:</b> ${boxes.join(", ")}</li>
-            <li><b>Total Soaps:</b> ${pkg.soaps}</li>
-            <li><b>Amount Paid:</b> ₹${pkg.price}</li>
-          </ul>
-
-          <h3>🏠 Delivery Address</h3>
-          <p>${houseNo}, ${street}, ${city} - ${pincode}</p>
+          <p><b>Name:</b> ${fullName}</p>
+          <p><b>Email:</b> ${email}</p>
+          <p><b>Mobile:</b> ${mobile}</p>
+          <p><b>Package:</b> ${pkg.label}</p>
+          <p><b>Boxes:</b> ${boxes.join(", ")}</p>
+          <p><b>Total Soaps:</b> ${pkg.soaps}</p>
+          <p><b>Amount:</b> ₹${pkg.price}</p>
+          <p><b>Address:</b> ${houseNo}, ${street}, ${city} - ${pincode}</p>
         </div>
       `,
     });
