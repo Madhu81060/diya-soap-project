@@ -20,6 +20,7 @@ app.use((req, res, next) => {
 });
 
 /* ================= SERVICES ================= */
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -33,20 +34,16 @@ const razorpay = new Razorpay({
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 /* ================= PACKAGE HELPER ================= */
-/**
- * PRODUCTION MODE (ORIGINAL PRICES)
- * NORMAL    : 1 box → 3 soaps  → ₹600 ✅
- * HALF_YEAR : 1 box → 6 soaps  → ₹900
- * ANNUAL    : 1 box → 12 soaps → ₹1188
- */
+
 function getPackageDetails(boxes, packType) {
+
   const boxCount = boxes.length;
 
   if (packType === "HALF_YEAR") {
     return {
       label: "Half-Yearly Pack",
       soaps: boxCount * 6,
-      price: boxCount * 900,
+      price: boxCount * 900
     };
   }
 
@@ -54,50 +51,103 @@ function getPackageDetails(boxes, packType) {
     return {
       label: "Annual Pack",
       soaps: boxCount * 12,
-      price: boxCount * 1188,
+      price: boxCount * 1188
     };
   }
 
-  // ✅ BACK TO ORIGINAL (600)
   return {
     label: "Regular Box",
     soaps: boxCount * 3,
-    price: boxCount * 600,
+    price: boxCount * 600
   };
+
 }
 
-/* ================= HEALTH ================= */
+/* ================= HEALTH CHECK ================= */
+
 app.get("/", (req, res) => {
-  res.json({ message: "Backend running ✅" });
+  res.json({
+    status: "OK",
+    message: "Backend running ✅"
+  });
+});
+
+/* ================= MEMBERS API (ADMIN PANEL) ================= */
+
+app.get("/members", async (req, res) => {
+
+  try {
+
+    const { data, error } = await supabase
+      .from("members")
+      .select("*");
+
+    if (error) {
+
+      console.error("Supabase fetch error:", error);
+
+      return res.status(500).json({
+        error: "Failed to fetch members"
+      });
+
+    }
+
+    return res.json(data);
+
+  } catch (err) {
+
+    console.error("Server error:", err);
+
+    return res.status(500).json({
+      error: "Server error"
+    });
+
+  }
+
 });
 
 /* ================= CREATE ORDER ================= */
+
 app.post("/create-order", async (req, res) => {
+
   try {
+
     const { boxes, packType } = req.body;
 
     if (!boxes || !boxes.length) {
-      return res.status(400).json({ error: "No boxes selected" });
+      return res.status(400).json({
+        error: "No boxes selected"
+      });
     }
 
     const pkg = getPackageDetails(boxes, packType);
 
     const order = await razorpay.orders.create({
-      amount: pkg.price * 100, // ₹600 → 60000 paise
+      amount: pkg.price * 100,
       currency: "INR",
-      receipt: "order_" + Date.now(),
+      receipt: "order_" + Date.now()
     });
 
     res.json(order);
+
   } catch (err) {
+
     console.error("Create order error:", err);
-    res.status(500).json({ error: "Order failed" });
+
+    res.status(500).json({
+      error: "Order creation failed"
+    });
+
   }
+
 });
 
 /* ================= VERIFY PAYMENT ================= */
+
 app.post("/verify-payment", async (req, res) => {
+
   try {
+
     const {
       razorpay_order_id,
       razorpay_payment_id,
@@ -111,102 +161,103 @@ app.post("/verify-payment", async (req, res) => {
       street,
       city,
       pincode,
-      orderId,
+      orderId
     } = req.body;
 
     /* VERIFY SIGNATURE */
+
     const body = razorpay_order_id + "|" + razorpay_payment_id;
+
     const expected = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(body)
       .digest("hex");
 
     if (expected !== razorpay_signature) {
-      return res.status(400).json({ error: "Invalid payment signature" });
+      return res.status(400).json({
+        error: "Invalid payment signature"
+      });
     }
 
     const pkg = getPackageDetails(boxes, packType);
 
-    /* UPDATE GRID */
+    /* UPDATE GRID BOXES */
+
     for (const box of boxes) {
+
       await supabase
         .from("grid_boxes")
-        .update({ status: "booked", booked_at: new Date().toISOString() })
+        .update({
+          status: "booked",
+          booked_at: new Date().toISOString()
+        })
         .eq("box_number", box);
+
     }
 
     /* INSERT MEMBER */
-    await supabase.from("members").insert({
-      order_id: orderId,
-      box_number: boxes.join(", "),
-      full_name: fullName,
-      email,
-      mobile,
-      house_no: houseNo,
-      street,
-      city,
-      pincode,
-      package_type: pkg.label,
-      no_of_soaps: pkg.soaps,
-      amount_paid: pkg.price,
-      payment_id: razorpay_payment_id,
-      payment_status: "success",
-      created_at: new Date().toISOString(),
-    });
 
-    /* ================= CUSTOMER EMAIL ================= */
+    const { error: insertError } = await supabase
+      .from("members")
+      .insert({
+        order_id: orderId,
+        box_number: boxes.join(", "),
+        full_name: fullName,
+        email,
+        mobile,
+        house_no: houseNo,
+        street,
+        city,
+        pincode,
+        package_type: pkg.label,
+        no_of_soaps: pkg.soaps,
+        amount_paid: pkg.price,
+        payment_id: razorpay_payment_id,
+        payment_status: "success",
+        created_at: new Date().toISOString()
+      });
+
+    if (insertError) {
+      console.error("Insert member error:", insertError);
+    }
+
+    /* SEND EMAIL */
+
     await resend.emails.send({
       from: "Diya Soaps <support@diyasoaps.com>",
       to: email,
       subject: `🎉 Order Confirmed | ${orderId}`,
       html: `
-        <div style="font-family:Arial,sans-serif;line-height:1.6">
-          <h2>Thank You for Choosing Diya Soaps, ${fullName}!</h2>
-          <p>Your payment was successful and your order is confirmed.</p>
-
-          <h3>🧾 Order Details</h3>
-          <table cellpadding="6">
-            <tr><td><b>Order ID</b></td><td>${orderId}</td></tr>
-            <tr><td><b>Package</b></td><td>${pkg.label}</td></tr>
-            <tr><td><b>Boxes</b></td><td>${boxes.join(", ")}</td></tr>
-            <tr><td><b>Total Soaps</b></td><td>${pkg.soaps}</td></tr>
-            <tr><td><b>Amount Paid</b></td><td>₹${pkg.price}</td></tr>
-          </table>
-
-          <p>Warm regards,<br/><b>Diya Soaps Team</b></p>
-        </div>
-      `,
+      <h2>Thank You ${fullName}</h2>
+      <p>Your order is confirmed.</p>
+      <p>Order ID: ${orderId}</p>
+      <p>Package: ${pkg.label}</p>
+      <p>Boxes: ${boxes.join(", ")}</p>
+      <p>Total Soaps: ${pkg.soaps}</p>
+      <p>Amount Paid: ₹${pkg.price}</p>
+      `
     });
 
-    /* ================= OWNER EMAIL ================= */
-    await resend.emails.send({
-      from: "Diya Soaps <support@diyasoaps.com>",
-      to: "diyasoapbusiness@gmail.com",
-      subject: `🛒 New Order Received | ${orderId}`,
-      html: `
-        <div style="font-family:Arial,sans-serif">
-          <h2>New Order Received</h2>
-          <p><b>Name:</b> ${fullName}</p>
-          <p><b>Email:</b> ${email}</p>
-          <p><b>Mobile:</b> ${mobile}</p>
-          <p><b>Package:</b> ${pkg.label}</p>
-          <p><b>Boxes:</b> ${boxes.join(", ")}</p>
-          <p><b>Total Soaps:</b> ${pkg.soaps}</p>
-          <p><b>Amount:</b> ₹${pkg.price}</p>
-          <p><b>Address:</b> ${houseNo}, ${street}, ${city} - ${pincode}</p>
-        </div>
-      `,
+    res.json({
+      success: true
     });
 
-    res.json({ success: true });
   } catch (err) {
+
     console.error("Verify payment error:", err);
-    res.status(500).json({ error: "Verification failed" });
+
+    res.status(500).json({
+      error: "Verification failed"
+    });
+
   }
+
 });
 
-/* ================= START ================= */
+/* ================= START SERVER ================= */
+
 const PORT = process.env.PORT || 10000;
+
 app.listen(PORT, () => {
-  console.log("🚀 Server running on port", PORT);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
