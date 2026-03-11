@@ -18,6 +18,7 @@ export default function GridSection({
   instruction,
   maxSelectable,
 }: GridSectionProps) {
+
   const [boxes, setBoxes] = useState<GridBox[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
@@ -26,8 +27,11 @@ export default function GridSection({
   const [submitError, setSubmitError] = useState("");
 
   /* ================= FETCH GRID ================= */
+
   const fetchBoxes = useCallback(async () => {
+
     try {
+
       const { data, error } = await supabase
         .from("grid_boxes")
         .select("*")
@@ -38,12 +42,18 @@ export default function GridSection({
 
       setBoxes((data ?? []) as GridBox[]);
       setErrorMsg("");
+
     } catch (err) {
+
       console.error(err);
       setErrorMsg("Failed to load grid");
+
     } finally {
+
       setLoading(false);
+
     }
+
   }, []);
 
   useEffect(() => {
@@ -51,29 +61,42 @@ export default function GridSection({
   }, [fetchBoxes]);
 
   /* ================= REFRESH ON TAB FOCUS ================= */
+
   useEffect(() => {
+
     const onFocus = () => fetchBoxes();
+
     window.addEventListener("focus", onFocus);
+
     return () => window.removeEventListener("focus", onFocus);
+
   }, [fetchBoxes]);
 
   /* ================= RESET ON OFFER CHANGE ================= */
+
   useEffect(() => {
+
     setSelected([]);
     setSubmitError("");
     setPage(1);
+
   }, [maxSelectable]);
 
   /* ================= REALTIME ================= */
+
   useEffect(() => {
+
     const channel = supabase
       .channel("grid-live")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "grid_boxes" },
         (payload: any) => {
+
           if (!payload?.new) return;
+
           const updated = payload.new as GridBox;
+
           if (updated.box_number > PHASE_ONE_LIMIT) return;
 
           setBoxes((prev) =>
@@ -81,6 +104,15 @@ export default function GridSection({
               b.box_number === updated.box_number ? updated : b
             )
           );
+
+          /* remove selected if booked by someone else */
+
+          if (updated.status !== "available") {
+            setSelected((prev) =>
+              prev.filter((b) => b !== updated.box_number)
+            );
+          }
+
         }
       )
       .subscribe();
@@ -88,51 +120,76 @@ export default function GridSection({
     return () => {
       supabase.removeChannel(channel);
     };
+
   }, []);
 
   /* ================= PAGINATION ================= */
+
   const totalPages = Math.max(1, Math.ceil(boxes.length / PAGE_SIZE));
+
   const pageData = boxes.slice(
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE
   );
 
   /* ================= BOX CLICK ================= */
+
   const handleBoxClick = (boxNumber: number) => {
+
     const box = boxes.find((b) => b.box_number === boxNumber);
+
     if (!box || box.status !== "available") return;
 
     setSelected((prev) => {
+
       if (prev.includes(boxNumber)) {
         return prev.filter((n) => n !== boxNumber);
       }
-      if (maxSelectable && prev.length >= maxSelectable) return prev;
+
+      if (maxSelectable && prev.length >= maxSelectable) {
+        return prev;
+      }
+
       return [...prev, boxNumber];
+
     });
+
   };
 
   /* ================= PROCEED ================= */
+
   const handleProceed = () => {
+
     if (selected.length === 0) {
+
       setSubmitError("Please select at least one box");
+
       return;
+
     }
 
     if (maxSelectable && selected.length !== maxSelectable) {
+
       setSubmitError(
         `Please select exactly ${maxSelectable} box${
           maxSelectable > 1 ? "es" : ""
         }`
       );
+
       return;
+
     }
 
     setSubmitError("");
+
     onBoxesSelected(selected);
+
   };
 
   /* ================= COLORS ================= */
+
   const getBoxColor = (box: GridBox) => {
+
     if (selected.includes(box.box_number))
       return "bg-yellow-500 text-white border-yellow-600 scale-105 shadow-md";
 
@@ -146,65 +203,92 @@ export default function GridSection({
       return "bg-green-500 text-white border-green-600 cursor-not-allowed";
 
     return "bg-gray-100 border-gray-300";
+
   };
 
   /* ================= LOADING ================= */
+
   if (loading) {
+
     return (
       <div className="flex justify-center py-16">
         <Loader2 className="animate-spin text-yellow-600" size={40} />
       </div>
     );
+
   }
 
   if (errorMsg) {
+
     return (
       <div className="text-center py-12 text-red-600 font-bold">
         {errorMsg}
       </div>
     );
+
   }
 
   /* ================= UI ================= */
+
   return (
+
     <section id="grid" className="py-12 bg-white">
+
       <div className="max-w-7xl mx-auto px-4">
 
         {instruction && (
+
           <div className="mb-6 p-4 rounded-xl bg-yellow-100 border border-yellow-300 text-center font-semibold">
             {instruction}
           </div>
+
         )}
 
         <div className="mb-8 rounded-3xl p-8 bg-gradient-to-r from-yellow-500 to-amber-500 text-white text-center shadow-xl">
+
           <div className="flex justify-center gap-2 mb-2">
+
             <Sparkles />
+
             <h3 className="text-2xl font-extrabold">
               Select Your Lucky Boxes
             </h3>
+
             <Sparkles />
+
           </div>
+
           <p className="font-semibold">
             Selected Boxes: {selected.length}
             {maxSelectable && ` / ${maxSelectable}`}
           </p>
 
           {selected.length > 0 && (
+
             <p className="text-sm mt-2">
               {selected.map((b) => String(b).padStart(3, "0")).join(", ")}
             </p>
+
           )}
+
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+
           <LiveSeatCounter />
+
           <CountdownTimer />
+
         </div>
 
         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-3">
+
           {pageData.map((box) => {
+
             const disabled = box.status !== "available";
+
             return (
+
               <button
                 key={box.box_number}
                 disabled={disabled}
@@ -213,26 +297,34 @@ export default function GridSection({
               >
                 {String(box.box_number).padStart(3, "0")}
               </button>
+
             );
+
           })}
+
         </div>
 
         {submitError && (
+
           <p className="text-center text-red-600 font-semibold mt-4">
             {submitError}
           </p>
+
         )}
 
         <div className="flex justify-center mt-8">
+
           <button
             onClick={handleProceed}
             className="px-10 py-3 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-xl shadow-lg"
           >
             Proceed to Registration
           </button>
+
         </div>
 
         <div className="flex justify-center gap-6 mt-10">
+
           <button
             disabled={page === 1}
             onClick={() => setPage((p) => p - 1)}
@@ -252,9 +344,12 @@ export default function GridSection({
           >
             Next
           </button>
+
         </div>
 
       </div>
+
     </section>
+
   );
-} 
+}
