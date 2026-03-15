@@ -494,7 +494,8 @@ try {
 
 await twilioClient.messages.create({
 
-from: "whatsapp:" + process.env.TWILIO_PHONE_NUMBER,
+from: "whatsapp:+14155238886",
+
 
 
 to: "whatsapp:+91" + mobile,
@@ -557,6 +558,7 @@ await twilioClient.messages.create({
 
 from: process.env.TWILIO_PHONE_NUMBER,
 
+
 to: "+91" + mobile,
 
 body: `Diya Soaps Order Confirmed
@@ -580,10 +582,12 @@ Support: 8125134699`
 
 await twilioClient.messages.create({
 
-from: "whatsapp:" + process.env.TWILIO_PHONE_NUMBER,
+from: "whatsapp:+14155238886",
+
 
 
 to: "whatsapp:+918125134699",
+
 
 body: `
 📦 *NEW ORDER RECEIVED*
@@ -616,7 +620,7 @@ Diya Soaps Admin Notification
 
 await twilioClient.messages.create({
 
-from: process.env.TWILIO_PHONE_NUMBER,
+ from: process.env.TWILIO_PHONE_NUMBER,
 
 to: "+918125134699",
 
