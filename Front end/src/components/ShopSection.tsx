@@ -9,6 +9,12 @@ interface ShopProps {
 }
 
 const TOTAL_MEMBERS = 250;
+const TEST_MODE = true;
+
+const PRICE_SINGLE = TEST_MODE ? 1 : 600;
+const PRICE_HALF = TEST_MODE ? 1 : 900;
+const PRICE_ANNUAL = TEST_MODE ? 1 : 1188;
+
 
 /* ================= BACKEND ================= */
 
@@ -116,7 +122,8 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
           </ul>
 
           <p className="text-3xl font-bold text-amber-800 mt-6">
-            ₹600 × {singleQty} = ₹{600 * singleQty}
+            ₹{PRICE_SINGLE} × {singleQty} = ₹{PRICE_SINGLE * singleQty}
+
           </p>
 
           {/* quantity */}
@@ -170,7 +177,8 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
           </ul>
 
           <p className="text-3xl font-bold text-amber-800 mt-6">
-            ₹900 × {halfYearQty} = ₹{900 * halfYearQty}
+            ₹{PRICE_HALF} × {halfYearQty} = ₹{PRICE_HALF * halfYearQty}
+
           </p>
 
           <div className="flex items-center gap-4 mt-4">
@@ -227,7 +235,8 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
 
           <p className="mt-6">
             <span className="text-3xl font-bold">
-              ₹1188 × {annualQty} = ₹{1188 * annualQty}
+              ₹{PRICE_ANNUAL} × {annualQty} = ₹{PRICE_ANNUAL * annualQty}
+
             </span>
           </p>
 

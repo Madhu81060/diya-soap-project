@@ -7,7 +7,7 @@ const API_BASE =
   "https://diya-backenddiya-backend.onrender.com";
 
 /* ================= TEST MODE ================= */
-const TEST_MODE = false;
+const TEST_MODE = true;
 
 /* ================= PROPS ================= */
 interface RegistrationModalProps {

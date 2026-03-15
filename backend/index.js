@@ -4,11 +4,22 @@ import Razorpay from "razorpay";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
+import twilio from "twilio";
+
 
 dotenv.config();
 
+/* TWILIO CLIENT */
+
+const twilioClient = twilio(
+ process.env.TWILIO_ACCOUNT_SID,
+ process.env.TWILIO_AUTH_TOKEN
+);
+
 const app = express();
 app.use(express.json());
+
+
 
 /* ================= CORS ================= */
 
@@ -44,9 +55,9 @@ function getPackageDetails(boxes, packType) {
 
   const boxCount = boxes.length;
 
-  const priceRegular = TEST_MODE ? boxCount * 600 : boxCount * 600;
-  const priceHalf = TEST_MODE ? boxCount * 900: boxCount * 900;
-  const priceAnnual = TEST_MODE ? boxCount * 1188: boxCount * 1188;
+  const priceRegular = TEST_MODE ? boxCount * 1 : boxCount * 600;
+  const priceHalf = TEST_MODE ? boxCount * 1: boxCount * 900;
+  const priceAnnual = TEST_MODE ? boxCount * 1: boxCount * 1188;
 
   if (packType === "HALF_YEAR") {
     return {
@@ -475,8 +486,162 @@ Diya Soaps Admin Notification
 
 `
 });
+/* ================= WHATSAPP + SMS NOTIFICATIONS ================= */
 
-res.json({success:true});
+try {
+
+/* ================= CUSTOMER WHATSAPP ================= */
+
+await twilioClient.messages.create({
+
+from: "whatsapp:" + process.env.TWILIO_PHONE_NUMBER,
+
+
+to: "whatsapp:+91" + mobile,
+
+body: `
+🌿 *DIYA RED SANDAL SOAP*
+
+✨ *Order Confirmation*
+
+Hello *${name}* 👋
+
+Your order has been successfully confirmed.
+
+━━━━━━━━━━━━━━━━
+
+📦 *Order Summary*
+
+🧾 Order ID : ${orderId}
+
+🧼 Package : ${pkg.label}
+
+🎁 Lucky Box : ${boxes.join(", ")}
+
+🧴 Total Soaps : ${pkg.soaps}
+
+💰 Amount Paid : ₹${pkg.price}
+
+━━━━━━━━━━━━━━━━
+
+🏆 *Gold Lucky Draw*
+
+For every *250 members*,  
+one lucky participant wins a  
+🥇 *1 Gram Gold Coin*
+
+Your lucky box entry has been successfully registered.
+
+Best of luck for the draw! 🍀
+
+━━━━━━━━━━━━━━━━
+
+📦 Delivery Time  
+5-7 business days
+
+📞 Support  
++91 81251 34699
+
+Thank you for choosing  
+🌿 *Diya Soaps*
+
+Natural Ayurvedic Skin Care
+`
+
+});
+
+
+/* ================= CUSTOMER SMS ================= */
+
+await twilioClient.messages.create({
+
+from: process.env.TWILIO_PHONE_NUMBER,
+
+to: "+91" + mobile,
+
+body: `Diya Soaps Order Confirmed
+
+Order ID: ${orderId}
+Package: ${pkg.label}
+Boxes: ${boxes.length}
+
+Total Soaps: ${pkg.soaps}
+
+Amount Paid: ₹${pkg.price}
+
+Delivery: 5-7 days
+
+Support: 8125134699`
+
+});
+
+
+/* ================= OWNER WHATSAPP ================= */
+
+await twilioClient.messages.create({
+
+from: "whatsapp:" + process.env.TWILIO_PHONE_NUMBER,
+
+
+to: "whatsapp:+918125134699",
+
+body: `
+📦 *NEW ORDER RECEIVED*
+
+━━━━━━━━━━━━━━━━
+
+👤 Customer : ${name}
+
+📱 Mobile : ${mobile}
+
+🧾 Order ID : ${orderId}
+
+🧼 Package : ${pkg.label}
+
+🎁 Lucky Boxes : ${boxes.join(", ")}
+
+🧴 Total Soaps : ${pkg.soaps}
+
+💰 Amount : ₹${pkg.price}
+
+━━━━━━━━━━━━━━━━
+
+Diya Soaps Admin Notification
+`
+
+});
+
+
+/* ================= OWNER SMS ================= */
+
+await twilioClient.messages.create({
+
+from: process.env.TWILIO_PHONE_NUMBER,
+
+to: "+918125134699",
+
+body: `New Order Received
+
+Customer: ${name}
+
+Order ID: ${orderId}
+
+Package: ${pkg.label}
+Boxes: ${boxes.length}
+
+
+Amount: ₹${pkg.price}`
+ 
+});
+
+} catch (err) {
+
+console.log("Notification error:", err);
+
+}
+
+
+res.json({success:true});    
 
 } catch(err){
 
@@ -485,7 +650,6 @@ res.status(500).json({error:"Verification failed"});
 }
 
 });
-
 /* ================= START SERVER ================= */
 
 const PORT = process.env.PORT || 10000;
