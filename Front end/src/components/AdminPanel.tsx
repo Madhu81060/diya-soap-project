@@ -38,7 +38,7 @@ export default function AdminPanel() {
       }
 
       const data = await res.json();
-      setMembers(data);
+      setMembers(data.data || []);
       setLoading(false);
 
     } catch (err) {

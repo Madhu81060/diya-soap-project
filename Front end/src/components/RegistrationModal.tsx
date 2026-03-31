@@ -151,7 +151,7 @@ export default function RegistrationModal({
       if (!res.ok) throw new Error(data.error || "Order failed");
 
       const rzp = new (window as any).Razorpay({
-        key: "rzp_live_SEoqwulgqrAXys",
+      key: "rzp_live_SEoqwulgqrAXys",
         amount: data.amount,
         currency: "INR",
         order_id: data.id,
@@ -169,6 +169,7 @@ export default function RegistrationModal({
         },
 
         handler: async (response: any) => {
+          console.log("RAZORPAY RESPONSE:", response);
           const verify = await fetch(`${API_BASE}/verify-payment`, {
             method: "POST",
             headers: {

@@ -34,13 +34,13 @@ const ShopSection: React.FC<ShopProps> = ({ onBuy }) => {
 
   const fetchMembers = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/slots`);
+      const res = await fetch(`${BACKEND_URL}/members`);
 
       if (!res.ok) throw new Error("Fetch failed");
 
       const data = await res.json();
 
-      setMembers(data.booked || 0);
+      setMembers(data.total || 0);
     } catch (err) {
       console.error("Members fetch error:", err);
       setMembers(0);
