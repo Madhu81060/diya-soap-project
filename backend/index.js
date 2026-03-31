@@ -375,15 +375,25 @@ Diya Soaps Admin Notification
     });
 
     /* ================= WHATSAPP TEMPLATE ================= */
-
    try {
   await twilioClient.messages.create({
     from: process.env.TWILIO_WHATSAPP_NUMBER,
     to: "whatsapp:+91" + mobile,
-    body: `Order confirmed successfully. Order ID: ${orderId}`
+    contentSid: process.env.TWILIO_TEMPLATE_SID,
+    contentVariables: JSON.stringify({
+      "1": name,
+      "2": orderId,
+      "3": pkg.label,
+      "4": boxes.length,
+      "5": pkg.soaps,
+      "6": pkg.price
+    })
   });
+
+  console.log("✅ WhatsApp sent");
+
 } catch (err) {
-  console.log("Twilio error:", err.message);
+  console.log("❌ WhatsApp ERROR:", err.message);
 }
 
     /* ===== FINAL RESPONSE ===== */
