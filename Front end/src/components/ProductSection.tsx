@@ -153,7 +153,7 @@ export default function ProductSection({
                   onClick={onBuyClick}
                   className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-yellow-600 to-amber-600 text-white font-extrabold shadow-xl hover:scale-105 transition"
                 >
-                  Buy Now – ₹600
+                  Buy Now – ₹300
                 </button>
 
                 <button

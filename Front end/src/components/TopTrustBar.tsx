@@ -66,18 +66,18 @@ export default function TopTrustBar() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-center font-semibold text-sm">
 
             <div className="bg-white/15 backdrop-blur-sm rounded-lg py-2">
-              📦 <b>Single Pack</b> — 3 Soaps ₹600
+              📦 <b>Starter Pack </b> — 1 Soaps ₹300
             </div>
 
             <div className="bg-white/15 backdrop-blur-sm rounded-lg py-2">
-              ⭐ <b>Half Pack</b> — 6 Soaps ₹900
+              ⭐ <b>Value Pack</b> — 3 Soaps ₹600
             </div>
 
             <div className="bg-yellow-300 text-red-700 rounded-lg py-2 font-extrabold shadow">
 
               <Sparkles size={14} className="inline mr-1 animate-pulse" />
 
-              <b>Annual Pack</b> — 12 Soaps ₹1188
+              <b> Bumper Pack</b> — 6 Soaps ₹900
 
             </div>
 
