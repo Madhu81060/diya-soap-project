@@ -1,6 +1,7 @@
 import React, { useRef } from "react";
 import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { Shield } from "lucide-react";
+import { Helmet } from "react-helmet-async";
 
 import Navbar from "./components/Navbar";
 import TopTrustBar from "./components/TopTrustBar";
@@ -73,6 +74,10 @@ function LandingPage() {
 
   return (
     <div className="min-h-screen bg-transparent">
+      <Helmet>
+        <title>Diya Soap - Premium Red Sandal Soap | Natural Ayurvedic Care</title>
+        <meta name="description" content="Pure Red Sandalwood Soap for glowing skin. Join the Diya Natural Products community and enter our gold lucky draw. Buy handmade Ayurvedic soaps today!" />
+      </Helmet>
       <Navbar onNavigate={handleNavigate} />
       <TopTrustBar />
 

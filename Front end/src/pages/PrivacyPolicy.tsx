@@ -1,6 +1,12 @@
+import { Helmet } from "react-helmet-async";
+
 export default function PrivacyPolicy() {
   return (
     <div className="bg-gray-50 min-h-screen">
+      <Helmet>
+        <title>Privacy Policy - Diya Soap | Natural & Ayurvedic Skincare</title>
+        <meta name="description" content="Read the Privacy Policy for Diya Soap. We are committed to protecting your personal information and ensuring your data privacy." />
+      </Helmet>
 
       {/* Hero Section */}
       <div className="bg-black text-white py-16 text-center">

@@ -1,6 +1,12 @@
+import { Helmet } from "react-helmet-async";
+
 export default function Terms() {
   return (
     <div className="bg-gray-50 min-h-screen">
+      <Helmet>
+        <title>Terms & Conditions - Diya Soap | Quality Ayurvedic Products</title>
+        <meta name="description" content="Review the Terms and Conditions of Diya Soap. Understand our policies on orders, pricing, and our exclusive gold lucky draw." />
+      </Helmet>
 
       {/* Hero Section */}
       <div className="bg-black text-white py-16 text-center">

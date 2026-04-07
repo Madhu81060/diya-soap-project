@@ -1,6 +1,12 @@
+import { Helmet } from "react-helmet-async";
+
 export default function RefundPolicy() {
   return (
     <div className="bg-gray-50 min-h-screen">
+      <Helmet>
+        <title>Refund & Cancellation Policy - Diya Soap | Customer Guarantee</title>
+        <meta name="description" content="Learn about the refund and cancellation policies at Diya Soap. We ensure a fair and transparent process for all our customers." />
+      </Helmet>
 
       {/* Hero Section */}
       <div className="bg-black text-white py-16 text-center">
