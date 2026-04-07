@@ -171,7 +171,7 @@ export default function ProductSection({
 
               <img
                 src={keyIngredientsImg}
-                alt="Key Ingredients - Diya Soap"
+                alt="Diya Red Sandal Soap Ingredients - diyasoaps"
                 className="
                   rounded-2xl sm:rounded-3xl shadow-xl
                   w-full h-auto

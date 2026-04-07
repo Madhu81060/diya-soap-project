@@ -918,7 +918,7 @@
 //   );
 // }
 import { motion, useScroll, useTransform } from "framer-motion";
-import { ArrowRight, Star, Play } from "lucide-react";
+import { ArrowRight, Star, Play, Sparkles } from "lucide-react";
 import { useRef } from "react";
 import { useSlots } from "../context/SlotContext";
 import heroSoap from "../assets/diya-soap.png";
@@ -958,109 +958,34 @@ export default function HeroSection({ onJoinClick }: HeroSectionProps) {
         flexDirection: "column",
       }}
     >
-      {/* ══════════════════════════════════
-          AMBIENT BACKGROUND
-      ══════════════════════════════════ */}
-      <div aria-hidden style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" }}>
-        {/* Warm gradient wash */}
-        <div style={{
-          position: "absolute", inset: 0,
-          background: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 45%, #fefce8 100%)",
-        }} />
-        {/* Top-right amber glow */}
-        <div style={{
-          position: "absolute", top: -180, right: -180,
-          width: 680, height: 680, borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(251,191,36,0.22) 0%, transparent 65%)",
-          filter: "blur(8px)",
-        }} />
-        {/* Bottom-left brown glow */}
-        <div style={{
-          position: "absolute", bottom: -120, left: -120,
-          width: 500, height: 500, borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(120,53,15,0.1) 0%, transparent 65%)",
-          filter: "blur(12px)",
-        }} />
-        {/* Center accent */}
-        <div style={{
-          position: "absolute", top: "30%", left: "50%",
-          transform: "translateX(-50%)",
-          width: 900, height: 400, borderRadius: "50%",
-          background: "radial-gradient(ellipse, rgba(251,191,36,0.07) 0%, transparent 70%)",
-        }} />
-        {/* Dot grid */}
-        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.055 }}>
-          <defs>
-            <pattern id="hero-dots" x="0" y="0" width="32" height="32" patternUnits="userSpaceOnUse">
-              <circle cx="1.5" cy="1.5" r="1.5" fill="#92400e" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#hero-dots)" />
-        </svg>
-        {/* Grain */}
-        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.035 }}>
-          <filter id="hero-grain">
-            <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="4" stitchTiles="stitch" />
-            <feColorMatrix type="saturate" values="0" />
-          </filter>
-          <rect width="100%" height="100%" filter="url(#hero-grain)" />
-        </svg>
-      </div>
+      {/* ── HERO BANNER ── */}
+      <div style={{
+        background: "linear-gradient(135deg, #78350f 0%, #d97706 50%, #fbbf24 100%)",
+        padding: "72px 20px 80px",
+        textAlign: "center",
+        position: "relative",
+        overflow: "hidden",
+      }}>
+        <div style={{ position: "absolute", top: -60, left: -60, width: 260, height: 260, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,255,255,0.2), transparent 70%)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: -60, right: -60, width: 260, height: 260, borderRadius: "50%", background: "radial-gradient(circle, rgba(120,53,15,0.3), transparent 70%)", pointerEvents: "none" }} />
 
-      {/* ══════════════════════════════════
-          MAIN HERO GRID
-      ══════════════════════════════════ */}
-      <div
-        className="hero-grid"
-        style={{
-          flex: 1,
-          maxWidth: 1280,
-          width: "100%",
-          margin: "0 auto",
-          padding: "18px 32px 40px",
-          display: "grid",
-          gridTemplateColumns: "1fr 1.2fr",
-          gap: 48,
-          alignItems: "center",
-          position: "relative",
-          zIndex: 1,
-        }}
-      >
-
-        {/* ════════════════
-            LEFT — COPY
-        ════════════════ */}
-        <motion.div
-          style={{ y: textY, opacity: fadeOut }}
-          className="hero-left"
+        <motion.p
+          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          style={{ color: "rgba(255,255,255,0.85)", letterSpacing: "0.3em", textTransform: "uppercase", fontSize: 11, fontWeight: 700, marginBottom: 12 }}
         >
+          ✦ Diya Natural Products ✦
+        </motion.p>
 
-          {/* Live indicator pill */}
-          <motion.div
-            initial={{ opacity: 0, x: -24 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 10,
-              background: "rgba(255,255,255,0.85)",
-              backdropFilter: "blur(10px)",
-              border: "1.5px solid rgba(217,119,6,0.25)",
-              borderRadius: 99, padding: "7px 16px 7px 12px",
-              marginBottom: 22,
-              boxShadow: "0 2px 12px rgba(217,119,6,0.1)",
-            }}
-          >
-            <span style={{
-              width: 8, height: 8, borderRadius: "50%",
-              background: "#16a34a",
-              boxShadow: "0 0 0 3px rgba(22,163,74,0.25)",
-              display: "inline-block",
-              animation: "pulse-green 2s ease-in-out infinite",
-            }} />
-            <span style={{ fontSize: 11.5, fontWeight: 800, color: "#78350f", letterSpacing: "0.14em", textTransform: "uppercase" }}>
-              Diya Natural Products
-            </span>
-          </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginBottom: 12 }}
+        >
+          <Sparkles color="#fff" size={24} />
+          <h1 style={{ margin: 0, fontSize: "clamp(2rem, 6vw, 3.6rem)", fontWeight: 900, color: "#fff", lineHeight: 1.15 }}>
+            Red Sandal Soap
+          </h1>
+          <Sparkles color="#fff" size={24} />
+        </motion.div>
 
           {/* Main headline */}
           <motion.div
@@ -1362,162 +1287,37 @@ export default function HeroSection({ onJoinClick }: HeroSectionProps) {
           </motion.div>
         </motion.div>
 
-        {/* ════════════════════════════
-            RIGHT — SOAP IMAGE
-        ════════════════════════════ */}
-        <motion.div
-          style={{ y: imageY, position: "relative", zIndex: 1 }}
-          initial={{ opacity: 0, x: 40, scale: 0.95 }}
-          animate={{ opacity: 1, x: 0, scale: 1 }}
-          transition={{ duration: 1, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-        >
-          {/* ── Outer glow ── */}
-          <div style={{
-            position: "absolute", inset: -32,
-            background: "radial-gradient(ellipse at 52% 52%, rgba(251,191,36,0.38) 0%, rgba(217,119,6,0.18) 40%, transparent 68%)",
-            filter: "blur(28px)", zIndex: 0, borderRadius: "50%",
-            pointerEvents: "none",
-          }} />
-
-          {/* ── Rotating dashed border ── */}
-          <div style={{
-            position: "absolute", inset: -20,
-            border: "1.5px dashed rgba(217,119,6,0.22)",
-            borderRadius: 40, zIndex: 0,
-            animation: "slowspin 35s linear infinite",
-            pointerEvents: "none",
-          }} />
-
-          {/* ── Second counter-rotating ring ── */}
-          <div style={{
-            position: "absolute", inset: -8,
-            border: "1px solid rgba(251,191,36,0.15)",
-            borderRadius: 36, zIndex: 0,
-            animation: "slowspin 20s linear infinite reverse",
-            pointerEvents: "none",
-          }} />
-
-          {/* ── MAIN IMAGE CARD ── */}
-          <div style={{
-            position: "relative", zIndex: 1,
-            borderRadius: 32,
-            overflow: "hidden",
-            display: "flex",
-            alignItems: "center",
-            lineHeight: 0,
-            boxShadow: [
-              "0 4px 6px rgba(0,0,0,0.04)",
-              "0 12px 24px rgba(120,53,15,0.12)",
-              "0 32px 64px rgba(120,53,15,0.18)",
-              "0 64px 120px rgba(120,53,15,0.12)",
-            ].join(", "),
-            border: "2px solid rgba(251,191,36,0.45)",
-            background: "linear-gradient(160deg, #fffbeb 0%, #fef9c3 100%)",
-          }}>
-            {/* Top gloss */}
-            <div style={{
-              position: "absolute", top: 0, left: 0, right: 0,
-              height: "42%",
-              background: "linear-gradient(180deg, rgba(255,255,255,0.52) 0%, transparent 100%)",
-              zIndex: 2, pointerEvents: "none",
-              borderRadius: "32px 32px 0 0",
-            }} />
-            {/* Side vignettes */}
-            <div style={{
-              position: "absolute", inset: 0, zIndex: 2, pointerEvents: "none",
-              background: "radial-gradient(ellipse at 50% 100%, rgba(120,53,15,0.08) 0%, transparent 70%)",
-            }} />
-
-            <motion.img
-              src={heroSoap}
-              alt="Diya Red Sandal Soap — Premium Ayurvedic"
-              animate={{ y: [0, -14, 0] }}
-              transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut" }}
-              style={{
-                width: "100%",
-                height: "auto",
-                display: "block",
-                objectFit: "cover",
-                borderRadius: 30,
-                position: "relative",
-                zIndex: 1,
-              }}
-            />
-          </div>
-
-          {/* ── BADGE: Goshala (top-right) ── */}
+          {/* RIGHT — IMAGE */}
           <motion.div
-            initial={{ opacity: 0, x: 16, y: -16 }}
-            animate={{ opacity: 1, x: 0, y: 0 }}
-            transition={{ delay: 0.65, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            style={{
-              position: "absolute", top: 16, right: -16, zIndex: 10,
-              background: "rgba(255,255,255,0.95)",
-              backdropFilter: "blur(12px)",
-              border: "1.5px solid #86efac",
-              borderRadius: 18,
-              boxShadow: "0 8px 28px rgba(22,163,74,0.18), 0 2px 8px rgba(0,0,0,0.06)",
-              padding: "10px 16px",
-              display: "flex", alignItems: "center", gap: 10,
-            }}
+            initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}
+            style={{ display: "flex", justifyContent: "center" }}
           >
-            <img src={cowImg} style={{ width: 32, height: 32 }} alt="cow" />
-            <div>
-              <p style={{ margin: 0, fontSize: 12.5, fontWeight: 900, color: "#15803d", lineHeight: 1.3 }}>10% to Goshala</p>
-              <p style={{ margin: 0, fontSize: 10, color: "#16a34a", fontWeight: 600 }}>Supporting Cows 🐄</p>
-            </div>
-          </motion.div>
+            <div style={{ position: "relative", width: "100%", maxWidth: 460 }}>
+              <img
+                src={heroSoap}
+                alt="Diya Red Sandal Soap"
+                style={{
+                  width: "100%", height: "auto",
+                  borderRadius: 24,
+                  boxShadow: "0 20px 60px rgba(217,119,6,0.25)",
+                  border: "1.5px solid #fde68a",
+                  display: "block",
+                }}
+              />
 
-          {/* ── BADGE: Gold Coin (mid-right) ── */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.6 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 1, duration: 0.55, type: "spring", stiffness: 200 }}
-            style={{
-              position: "absolute", top: "50%", right: -20, zIndex: 10,
-              transform: "translateY(-50%)",
-              background: "linear-gradient(145deg, #431407, #78350f, #b45309)",
-              borderRadius: 16,
-              boxShadow: "0 10px 32px rgba(67,20,7,0.5), inset 0 1px 0 rgba(251,191,36,0.2)",
-              padding: "12px 14px",
-              textAlign: "center",
-              border: "1px solid rgba(251,191,36,0.35)",
-              minWidth: 56,
-            }}
-          >
-            <motion.p
-              animate={{ rotateY: [0, 20, 0, -20, 0] }}
-              transition={{ duration: 3, repeat: Infinity, repeatDelay: 2 }}
-              style={{ margin: 0, fontSize: 24, lineHeight: 1 }}
-            >🥇</motion.p>
-            <p style={{ margin: "5px 0 0", fontSize: 9.5, fontWeight: 900, color: "#fbbf24", letterSpacing: "0.06em", lineHeight: 1.4 }}>1g GOLD</p>
-            <p style={{ margin: 0, fontSize: 9.5, fontWeight: 900, color: "rgba(255,255,255,0.8)", letterSpacing: "0.04em" }}>COIN</p>
-          </motion.div>
-
-          {/* ── Ambient sparkle dots ── */}
-          {[
-            { top: "12%",  left: "-7%",   size: 11, delay: 0,   dur: 2.8 },
-            { top: "78%",  left: "108%",  size: 8,  delay: 0.7, dur: 3.2 },
-            { top: "3%",   left: "52%",   size: 7,  delay: 1.3, dur: 2.5 },
-            { top: "88%",  left: "22%",   size: 6,  delay: 0.4, dur: 3.6 },
-          ].map((dot, i) => (
-            <motion.div
-              key={i}
-              animate={{ scale: [0.8, 1.6, 0.8], opacity: [0.45, 1, 0.45] }}
-              transition={{ duration: dot.dur, repeat: Infinity, delay: dot.delay, ease: "easeInOut" }}
-              style={{
-                position: "absolute",
-                top: dot.top, left: dot.left,
-                width: dot.size, height: dot.size,
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, #fbbf24, #f59e0b)",
-                boxShadow: `0 0 ${dot.size * 2.5}px rgba(251,191,36,0.75)`,
-                zIndex: 5, pointerEvents: "none",
-              }}
-            />
-          ))}
-        </motion.div>
-      </div>
+              {/* GOSHALA BADGE */}
+              <div style={{
+                position: "absolute", top: 14, right: 14,
+                background: "#fff", border: "1.5px solid #86efac",
+                borderRadius: 14, boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+                padding: "10px 14px", display: "flex", alignItems: "center", gap: 10,
+              }}>
+                <img src={cowImg} style={{ width: 32, height: 32 }} alt="cow" />
+                <div>
+                  <p style={{ margin: 0, fontSize: 12, fontWeight: 800, color: "#166534" }}>10% to Goshala</p>
+                  <p style={{ margin: 0, fontSize: 11, color: "#16a34a" }}>Cow Support</p>
+                </div>
+              </div>
 
       {/* ══════════════════════════════════
           TRUST BAR

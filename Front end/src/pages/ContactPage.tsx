@@ -1,6 +1,12 @@
+import { Helmet } from "react-helmet-async";
+
 export default function ContactPage() {
   return (
     <div className="bg-gray-50 min-h-screen">
+      <Helmet>
+        <title>Contact Us - Diya Soap | Support & Inquiries</title>
+        <meta name="description" content="Have questions about Diya Soaps? Contact our support team for order inquiries, product details, or lucky draw assistance." />
+      </Helmet>
 
       {/* Hero Section */}
       <div className="bg-black text-white py-16 text-center">

@@ -114,7 +114,7 @@ export default function ProofSection() {
             >
               <img
                 src={img}
-                alt="Diya Red Sandal Soap"
+                alt={`Diya Red Sandal Soap Proof ${i + 1} - diyasoaps authenticity`}
                 className="w-full h-64 object-cover group-hover:scale-105 transition duration-500"
               />
             </div>

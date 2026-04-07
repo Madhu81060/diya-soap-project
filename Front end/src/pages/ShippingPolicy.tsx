@@ -1,6 +1,12 @@
+import { Helmet } from "react-helmet-async";
+
 export default function ShippingPolicy() {
   return (
     <div className="bg-gray-50 min-h-screen">
+      <Helmet>
+        <title>Shipping Policy - Diya Soap | Pan-India Delivery</title>
+        <meta name="description" content="Read how Diya Soap handles shipping and delivery across India. Fast, reliable, and secure Ayurvedic product shipping." />
+      </Helmet>
 
       {/* Hero Section */}
       <div className="bg-black text-white py-16 text-center">
