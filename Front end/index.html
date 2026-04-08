@@ -76,7 +76,75 @@
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Static SEO shell – replaced by React on load. Crawlers read this. -->
+      <header style="background:#1a0800;padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;">
+        <span style="color:#d97706;font-size:1.5rem;font-weight:900;font-family:Poppins,sans-serif;">Diya Soaps</span>
+        <nav style="display:flex;gap:1.5rem;">
+          <a href="https://www.diyasoaps.com/" style="color:#fff;text-decoration:none;font-family:Poppins,sans-serif;">Home</a>
+          <a href="https://www.diyasoaps.com/contact-page" style="color:#fff;text-decoration:none;font-family:Poppins,sans-serif;">Contact</a>
+        </nav>
+      </header>
+
+      <main style="font-family:Poppins,sans-serif;max-width:900px;margin:0 auto;padding:2rem 1.5rem;">
+
+        <h1 style="font-size:2.5rem;font-weight:900;color:#1a0800;margin-bottom:0.5rem;">
+          Diya Red Sandal Soap – Premium Ayurvedic Skincare
+        </h1>
+        <p style="font-size:1.1rem;color:#7c3b06;margin-bottom:1.5rem;">
+          Pure Red Sandalwood Soap from Diya Natural Products. Ayurvedic, natural, and handmade in India for glowing skin. Starting at just ₹300.
+        </p>
+
+        <section aria-label="About Diya Soaps">
+          <h2 style="font-size:1.6rem;font-weight:700;color:#92400e;margin-bottom:0.75rem;">
+            Why Choose Diya Red Sandal Soap?
+          </h2>
+          <p style="color:#3b1f0a;line-height:1.8;margin-bottom:1rem;">
+            At Diya Natural Products, we craft premium Red Sandalwood soaps using authentic Ayurvedic ingredients. Our Diya Red Sandal Soap is made with pure red sandalwood powder, natural oils, and traditional herbs — free from parabens, harsh chemicals, and artificial dyes. Perfect for skin brightening, tan removal, and daily natural skincare in India.
+          </p>
+          <ul style="color:#3b1f0a;line-height:2;padding-left:1.5rem;">
+            <li>100% Natural &amp; Ayurvedic Red Sandalwood Soap</li>
+            <li>Skin brightening and tan removal formula</li>
+            <li>Safe for all skin types – no harsh chemicals</li>
+            <li>Handmade in India by Diya Natural Products</li>
+            <li>10% of all proceeds support Goshala (Cow Care)</li>
+            <li>Starting from ₹300 – buy online at diyasoaps.com</li>
+          </ul>
+        </section>
+
+        <section aria-label="Diya Soaps Products" style="margin-top:2rem;">
+          <h2 style="font-size:1.6rem;font-weight:700;color:#92400e;margin-bottom:0.75rem;">
+            Our Products – Diya Soap Collection
+          </h2>
+          <p style="color:#3b1f0a;line-height:1.8;">
+            Diya Soaps offers handcrafted Ayurvedic soap bars infused with pure Red Sandalwood (Raktha Chandanam). Our soaps are ideal for anyone looking for natural skincare alternatives to chemical-laden products. Choose from our range of premium soap bars and experience the ancient Indian beauty secret used for centuries.
+          </p>
+        </section>
+
+        <section aria-label="Gold Lucky Draw Offer" style="margin-top:2rem;">
+          <h2 style="font-size:1.6rem;font-weight:700;color:#92400e;margin-bottom:0.75rem;">
+            Gold Lucky Draw – First 500 Members
+          </h2>
+          <p style="color:#3b1f0a;line-height:1.8;">
+            Every purchase of Diya Red Sandal Soap gives you a chance to win Gold! Only the first 500 members qualify for our exclusive Gold Lucky Draw. Order now from <a href="https://www.diyasoaps.com/" style="color:#d97706;">diyasoaps.com</a> and secure your spot.
+          </p>
+        </section>
+
+        <section aria-label="Contact Diya Soaps" style="margin-top:2rem;">
+          <h2 style="font-size:1.6rem;font-weight:700;color:#92400e;margin-bottom:0.75rem;">
+            Contact Diya Natural Products
+          </h2>
+          <p style="color:#3b1f0a;line-height:1.8;">
+            Have a question about our Ayurvedic Red Sandal Soap? Call or WhatsApp us at <strong>+91 8125134699</strong>. We are happy to help you find the perfect natural skincare solution. Visit our website: <a href="https://www.diyasoaps.com/" style="color:#d97706;">www.diyasoaps.com</a>
+          </p>
+        </section>
+
+      </main>
+
+      <footer style="background:#1a0800;color:#d97706;text-align:center;padding:1.5rem;font-family:Poppins,sans-serif;margin-top:3rem;">
+        <p>&copy; 2026 Diya Natural Products | <a href="https://www.diyasoaps.com/" style="color:#d97706;">www.diyasoaps.com</a> | Red Sandal Soap | Ayurvedic Skincare India</p>
+      </footer>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
