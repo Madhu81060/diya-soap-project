@@ -74,7 +74,7 @@ export default function ProductSection({
           <h2 className="mt-5 text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900">
             Why Choose{" "}
             <span className="bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent">
-              Red Sandal Soap
+              Diya Red Sandal Soap
             </span>
             ?
           </h2>

@@ -1076,7 +1076,7 @@ export default function HeroSection({ onJoinClick }: HeroSectionProps) {
               letterSpacing: "-0.025em",
               color: "#1a0800",
             }}>
-              Diyasoaps
+              Diya Red Sandal
               <br />
               <span style={{
                 background: "linear-gradient(125deg, #d97706 20%, #92400e 80%)",
@@ -1084,7 +1084,7 @@ export default function HeroSection({ onJoinClick }: HeroSectionProps) {
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
               }}>
-                Red Sandal Premium
+                Premium Soap
               </span>
             </h1>
 

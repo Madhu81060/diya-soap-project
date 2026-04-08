@@ -75,8 +75,8 @@ function LandingPage() {
   return (
     <div className="min-h-screen bg-transparent">
       <Helmet>
-        <title>Diya Soap - Premium Red Sandal Soap | Natural Ayurvedic Care</title>
-        <meta name="description" content="Pure Red Sandalwood Soap for glowing skin. Join the Diya Natural Products community and enter our gold lucky draw. Buy handmade Ayurvedic soaps today!" />
+        <title>Diya Soap - Premium Red Sandal Soap | Natural Ayurvedic Skincare</title>
+        <meta name="description" content="Pure Red Sandalwood Soap for naturally glowing skin. Ayurvedic, natural, and premium skincare by Diya Natural Products. Buy now and enter our gold lucky draw!" />
       </Helmet>
       <Navbar onNavigate={handleNavigate} />
       <TopTrustBar />
