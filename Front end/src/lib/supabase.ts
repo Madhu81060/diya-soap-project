@@ -46,12 +46,3 @@ export interface Member {
   updated_at: string;
 }
 
-// Lucky draw table
-export interface LuckyDraw {
-  id: string;
-  draw_date: string;
-  winner_member_id: string | null;
-  prize_description: string;
-  is_announced: boolean;
-  created_at: string;
-}

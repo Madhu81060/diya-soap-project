@@ -920,7 +920,6 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight, Star, Play } from "lucide-react";
 import { useRef } from "react";
-import { useSlots } from "../context/SlotContext";
 import heroSoap from "../assets/diya-soap.png";
 import cowImg from "../assets/cow.png";
 
@@ -929,20 +928,9 @@ interface HeroSectionProps {
 }
 
 export default function HeroSection({ onJoinClick }: HeroSectionProps) {
-  const { booked, total } = useSlots();
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end start"],
-  });
-
   const imageY  = useTransform(scrollYProgress, [0, 1], [0, 80]);
   const textY   = useTransform(scrollYProgress, [0, 1], [0, 40]);
   const fadeOut = useTransform(scrollYProgress, [0, 0.65], [1, 0]);
-
-  const available = total - booked;
-  const progress  = Math.min(100, Math.round((booked / total) * 100));
 
   return (
     <section
@@ -1112,97 +1100,10 @@ export default function HeroSection({ onJoinClick }: HeroSectionProps) {
               maxWidth: 420,
             }}
           >
-            Experience the ancient Ayurvedic power of red sandalwood with Diyasoaps, specially crafted for modern skin. Buy a box &amp; enter our lucky draw —{" "}
-            <strong style={{ color: "#92400e", fontWeight: 900 }}>
-              1 lucky winner wins a 1 gram Gold Coin!
-            </strong>
+            Experience the ancient Ayurvedic power of red sandalwood with Diyasoaps, specially crafted for modern skin.
           </motion.p>
 
-          {/* ── GOLD COIN LUCKY DRAW BANNER ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.65, delay: 0.26 }}
-            style={{
-              position: "relative",
-              borderRadius: 20,
-              padding: "16px 20px",
-              marginBottom: 22,
-              overflow: "hidden",
-              background: "linear-gradient(130deg, #431407 0%, #78350f 40%, #b45309 100%)",
-              boxShadow: "0 16px 48px rgba(67,20,7,0.35), inset 0 1px 0 rgba(251,191,36,0.2)",
-              border: "1px solid rgba(251,191,36,0.25)",
-            }}
-          >
-            {/* Shimmer sweep */}
-            <motion.div
-              animate={{ x: ["-110%", "210%"] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", repeatDelay: 2 }}
-              style={{
-                position: "absolute", inset: 0,
-                background: "linear-gradient(90deg, transparent 20%, rgba(255,255,255,0.1) 50%, transparent 80%)",
-                pointerEvents: "none", zIndex: 0,
-              }}
-            />
-            {/* Inner top highlight */}
-            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: "linear-gradient(90deg, transparent, rgba(251,191,36,0.5), transparent)" }} />
 
-            <div style={{ display: "flex", alignItems: "center", gap: 16, position: "relative", zIndex: 1 }}>
-              {/* Gold coin icon */}
-              <div style={{
-                width: 56, height: 56, borderRadius: 16, flexShrink: 0,
-                background: "linear-gradient(145deg, rgba(251,191,36,0.3), rgba(251,191,36,0.1))",
-                border: "1.5px solid rgba(251,191,36,0.5)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 30,
-                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15)",
-              }}>
-                🥇
-              </div>
-
-              <div style={{ flex: 1 }}>
-                <p style={{
-                  margin: "0 0 3px",
-                  fontSize: 10.5, fontWeight: 900,
-                  color: "#fbbf24", letterSpacing: "0.16em",
-                  textTransform: "uppercase",
-                }}>
-                  Lucky Draw Prize
-                </p>
-                <p style={{
-                  margin: "0 0 10px",
-                  fontSize: 19, fontWeight: 900,
-                  color: "#fff", lineHeight: 1.15,
-                  letterSpacing: "-0.01em",
-                }}>
-                  1 Gram Gold Coin 🏆
-                </p>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{
-                    background: "rgba(255,255,255,0.12)",
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    borderRadius: 99, padding: "4px 12px",
-                    fontSize: 11, fontWeight: 800,
-                    color: "rgba(255,255,255,0.92)",
-                    letterSpacing: "0.02em",
-                  }}>
-                    👥 1 Winner per 250 Members
-                  </span>
-                  <span style={{
-                    background: "rgba(220,38,38,0.28)",
-                    border: "1px solid rgba(252,165,165,0.35)",
-                    borderRadius: 99, padding: "4px 12px",
-                    fontSize: 11, fontWeight: 800,
-                    color: "#fca5a5",
-                    display: "flex", alignItems: "center", gap: 5,
-                  }}>
-                    <Play size={9} fill="#fca5a5" color="#fca5a5" />
-                    YouTube Live Draw
-                  </span>
-                </div>
-              </div>
-            </div>
-          </motion.div>
 
           {/* ── PRICING TRIO ── */}
           <motion.div
@@ -1275,51 +1176,7 @@ export default function HeroSection({ onJoinClick }: HeroSectionProps) {
             ))}
           </motion.div>
 
-          {/* ── LIVE SLOTS BAR ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.65, delay: 0.4 }}
-            style={{
-              background: "rgba(255,255,255,0.85)",
-              backdropFilter: "blur(10px)",
-              border: "1.5px solid rgba(217,119,6,0.2)",
-              borderRadius: 16, padding: "13px 18px", marginBottom: 22,
-              boxShadow: "0 4px 20px rgba(251,191,36,0.1)",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 9 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                <span style={{ fontSize: 13 }}>🎯</span>
-                <span style={{ fontSize: 13, fontWeight: 800, color: "#78350f" }}>Slots Filling Fast</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{
-                  background: "#fef9c3", border: "1px solid #fde68a",
-                  borderRadius: 99, padding: "2px 10px",
-                  fontSize: 12, fontWeight: 900, color: "#92400e",
-                }}>
-                  {available} left
-                </span>
-                <span style={{ fontSize: 12, color: "#bbb", fontWeight: 600 }}>of {total}</span>
-              </div>
-            </div>
-            <div style={{ height: 7, background: "#fef9c3", borderRadius: 99, overflow: "hidden" }}>
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 1.6, ease: [0.22, 1, 0.36, 1], delay: 0.6 }}
-                style={{
-                  height: "100%",
-                  background: "linear-gradient(90deg, #fbbf24, #d97706, #b45309)",
-                  borderRadius: 99,
-                }}
-              />
-            </div>
-            <p style={{ margin: "7px 0 0", fontSize: 11, color: "#a16207", fontWeight: 600 }}>
-              ⏳ Limited slots — book before it fills up!
-            </p>
-          </motion.div>
+
 
           {/* ── CTA ROW ── */}
           <motion.div
@@ -1468,31 +1325,6 @@ export default function HeroSection({ onJoinClick }: HeroSectionProps) {
             </div>
           </motion.div>
 
-          {/* ── BADGE: Gold Coin (mid-right) ── */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.6 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 1, duration: 0.55, type: "spring", stiffness: 200 }}
-            style={{
-              position: "absolute", top: "50%", right: -20, zIndex: 10,
-              transform: "translateY(-50%)",
-              background: "linear-gradient(145deg, #431407, #78350f, #b45309)",
-              borderRadius: 16,
-              boxShadow: "0 10px 32px rgba(67,20,7,0.5), inset 0 1px 0 rgba(251,191,36,0.2)",
-              padding: "12px 14px",
-              textAlign: "center",
-              border: "1px solid rgba(251,191,36,0.35)",
-              minWidth: 56,
-            }}
-          >
-            <motion.p
-              animate={{ rotateY: [0, 20, 0, -20, 0] }}
-              transition={{ duration: 3, repeat: Infinity, repeatDelay: 2 }}
-              style={{ margin: 0, fontSize: 24, lineHeight: 1 }}
-            >🥇</motion.p>
-            <p style={{ margin: "5px 0 0", fontSize: 9.5, fontWeight: 900, color: "#fbbf24", letterSpacing: "0.06em", lineHeight: 1.4 }}>1g GOLD</p>
-            <p style={{ margin: 0, fontSize: 9.5, fontWeight: 900, color: "rgba(255,255,255,0.8)", letterSpacing: "0.04em" }}>COIN</p>
-          </motion.div>
 
           {/* ── Ambient sparkle dots ── */}
           {[
@@ -1543,8 +1375,6 @@ export default function HeroSection({ onJoinClick }: HeroSectionProps) {
           {[
             { icon: "🌿", text: "100% Natural"       },
             { icon: "🐄", text: "Goshala Support"    },
-            { icon: "🥇", text: "1g Gold Coin Prize" },
-            { icon: "▶",  text: "YouTube Live Draw"  },
             { icon: "🔒", text: "Secure Payment"     },
             { icon: "🚚", text: "Fast Delivery"      },
           ].map((item, i) => (

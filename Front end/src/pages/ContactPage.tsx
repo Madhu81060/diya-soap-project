@@ -5,7 +5,7 @@ export default function ContactPage() {
     <div className="bg-gray-50 min-h-screen">
       <Helmet>
         <title>Contact Us - Diya Soap | Support & Inquiries</title>
-        <meta name="description" content="Have questions about Diya Soaps? Contact our support team for order inquiries, product details, or lucky draw assistance." />
+        <meta name="description" content="Have questions about Diya Soaps? Contact our support team for order inquiries or product details." />
       </Helmet>
 
       {/* Hero Section */}

@@ -622,23 +622,21 @@ const PACK_CONFIG = {
   RED_SANDAL: { label: "Red Sandal Premium Kit", soapsPerBox: 14, pricePerBox: TEST_MODE ? 1 : 50000, mrpPerBox: null,  isKit: true  },
 };
 
-function getPackageDetails(boxes, packType) {
+function getPackageDetails(qty, packType) {
   const cfg = PACK_CONFIG[packType] || PACK_CONFIG.NORMAL;
+  const count = qty || 1;
 
   if (cfg.isKit) {
-    // boxes array = selected lucky box numbers, length = number of kits ordered
-    const kitCount = Array.isArray(boxes) && boxes.length > 0 ? boxes.length : 1;
     return {
       label:   cfg.label,
-      soaps:   cfg.soapsPerBox * kitCount,   // 14 products × number of kits
-      price:   cfg.pricePerBox * kitCount,   // ₹50000 × number of kits
+      soaps:   cfg.soapsPerBox * count,   // 14 products × number of kits
+      price:   cfg.pricePerBox * count,   // ₹50000 × number of kits
       mrp:     null,
       savings: 0,
       isKit:   true,
     };
   }
 
-  const count   = Array.isArray(boxes) ? boxes.length : 1;
   const price   = cfg.pricePerBox * count;
   const mrp     = cfg.mrpPerBox   ? cfg.mrpPerBox * count : null;
   const savings = mrp             ? mrp - price            : 0;
@@ -680,45 +678,7 @@ function normaliseCustomer(body) {
   };
 }
 
-/* ══════════════════════════════════════════════════════════════════════
-   AUTO-RELEASE RESERVED BOXES
-══════════════════════════════════════════════════════════════════════ */
-async function releaseExpiredReservations() {
-  try {
-    const cutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
-    const { data: expiredBoxes, error: fetchErr } = await supabase
-      .from("grid_boxes")
-      .select("box_number, reserved_at")
-      .eq("status", "reserved")
-      .or(`reserved_at.is.null,reserved_at.lt.${cutoff}`);
-
-    if (fetchErr) {
-      console.error("Auto-release fetch error:", fetchErr.message);
-      return;
-    }
-
-    if (!expiredBoxes || expiredBoxes.length === 0) return;
-
-    const boxNumbers = expiredBoxes.map(b => b.box_number);
-
-    const { error: updateErr } = await supabase
-      .from("grid_boxes")
-      .update({ status: "available", reserved_at: null })
-      .in("box_number", boxNumbers);
-
-    if (updateErr) {
-      console.error("Auto-release update error:", updateErr.message);
-    } else {
-      console.log(`⏳ Auto-released ${boxNumbers.length} expired/stuck reserved box(es): [${boxNumbers.join(", ")}]`);
-    }
-  } catch (err) {
-    console.error("Auto-release error:", err.message);
-  }
-}
-
-releaseExpiredReservations();
-setInterval(releaseExpiredReservations, 60_000);
 
 /* ══════════════════════════════════════════════════════════════════════
    ROUTES
@@ -747,24 +707,6 @@ app.get("/members", async (req, res) => {
   }
 });
 
-app.get("/grid-status", async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from("grid_boxes")
-      .select("box_number, status, reserved_at, booked_at")
-      .order("box_number", { ascending: true });
-
-    if (error) return res.status(500).json({ success: false, message: error.message });
-
-    const booked    = data.filter(d => d.status === "booked").length;
-    const reserved  = data.filter(d => d.status === "reserved").length;
-    const available = data.filter(d => d.status === "available").length;
-
-    return res.json({ success: true, boxes: data, stats: { booked, reserved, available, total: data.length } });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-});
 
 app.post("/send-contact-mail", async (req, res) => {
   try {
@@ -792,12 +734,12 @@ app.post("/send-contact-mail", async (req, res) => {
 
 app.post("/create-order", async (req, res) => {
   try {
-    const { boxes, packType } = req.body;
+    const { qty, packType } = req.body;
 
     if (!packType) return res.status(400).json({ success: false, message: "packType is required" });
     if (!PACK_CONFIG[packType]) return res.status(400).json({ success: false, message: `Unknown packType: ${packType}` });
 
-    const pkg = getPackageDetails(boxes, packType);
+    const pkg = getPackageDetails(qty, packType);
 
     const order = await razorpay.orders.create({
       amount:   pkg.price * 100,
@@ -805,13 +747,12 @@ app.post("/create-order", async (req, res) => {
       receipt:  "order_" + Date.now(),
       notes: {
         packType,
-        boxes:      Array.isArray(boxes) ? boxes.join(",") : "",
         totalSoaps: pkg.soaps,
         totalPrice: pkg.price,
       },
     });
 
-    console.log(`📦 Order created | packType=${packType} | boxes=${JSON.stringify(boxes)} | soaps=${pkg.soaps} | amount=₹${pkg.price} | orderId=${order.id}`);
+    console.log(`📦 Order created | packType=${packType} | qty=${qty} | soaps=${pkg.soaps} | amount=₹${pkg.price} | orderId=${order.id}`);
 
     res.json({
       ...order,
@@ -836,7 +777,7 @@ app.post("/verify-payment", async (req, res) => {
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature,
-      boxes,
+      qty,
       packType,
       pack,
       orderId,
@@ -848,13 +789,10 @@ app.post("/verify-payment", async (req, res) => {
     /* ── Validate ── */
     if (!razorpay_payment_id) return res.status(400).json({ success: false, message: "Payment ID missing" });
     if (!razorpay_signature)  return res.status(400).json({ success: false, message: "Signature missing" });
-    if (!boxes || boxes.length === 0) {
-      return res.status(400).json({ success: false, message: "Boxes data missing" });
-    }
 
     /* ── Normalise customer ── */
     const customer = normaliseCustomer(req.body);
-    const pkg      = getPackageDetails(boxes, resolvedPackType);
+    const pkg      = getPackageDetails(qty, resolvedPackType);
 
     /* ── Verify Razorpay signature ── */
     const sigBody  = razorpay_order_id + "|" + razorpay_payment_id;
@@ -868,30 +806,6 @@ app.post("/verify-payment", async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid payment signature" });
     }
 
-    /* ── Mark grid boxes as booked ── */
-    if (Array.isArray(boxes) && boxes.length > 0) {
-      const boxIntegers = boxes.map(b => parseInt(b, 10)).filter(n => !isNaN(n));
-      console.log(`🔄 Marking boxes as booked: [${boxIntegers.join(", ")}]`);
-
-      const { data: updatedBoxes, error: boxErr } = await supabase
-        .from("grid_boxes")
-        .update({
-          status:      "booked",
-          booked_at:   new Date().toISOString(),
-          reserved_at: null,
-        })
-        .in("box_number", boxIntegers)
-        .select("box_number");
-
-      if (boxErr) {
-        console.error("❌ Box update error:", boxErr.message);
-      } else {
-        console.log(`✅ Grid boxes marked booked: [${updatedBoxes?.map(b => b.box_number).join(", ") || "none"}]`);
-        if (!updatedBoxes || updatedBoxes.length === 0) {
-          console.warn("⚠️ No grid boxes updated — check box numbers match DB records");
-        }
-      }
-    }
 
     /* ── Save member ── */
     const memberPayload = {
@@ -907,7 +821,7 @@ app.post("/verify-payment", async (req, res) => {
       city:       customer.city,
       pincode:    customer.pincode,
 
-      box_number:   Array.isArray(boxes) ? boxes.join(", ") : "",
+      box_number:   resolvedPackCfg.isKit ? "KIT" : "N/A",
       package_type: pkg.label,
       no_of_soaps:  pkg.soaps,
       amount_paid:  pkg.price,
@@ -923,24 +837,15 @@ app.post("/verify-payment", async (req, res) => {
       console.log(`✅ Member saved: ${customer.fullName}`);
     }
 
-    console.log(`✅ Payment verified | orderId=${razorpay_payment_id} | pack=${resolvedPackType} | boxes=${JSON.stringify(boxes)} | soaps=${pkg.soaps} | amount=₹${pkg.price} | customer=${customer.fullName}`);
+    console.log(`✅ Payment verified | orderId=${razorpay_payment_id} | pack=${resolvedPackType} | qty=${qty} | soaps=${pkg.soaps} | amount=₹${pkg.price} | customer=${customer.fullName}`);
 
     /* ── Customer email ── */
-    const kitCount = resolvedPackCfg.isKit ? (Array.isArray(boxes) ? boxes.length : 1) : null;
-
-    const boxesHtml = resolvedPackCfg.isKit
-      ? `<p style="color:#dc2626;font-weight:bold;">
-           ${kitCount} Red Sandal Premium Kit${kitCount > 1 ? "s" : ""} — ${pkg.soaps} Ayurvedic Products
-         </p>
-         <p style="margin:4px 0;font-size:13px">Lucky Box${kitCount > 1 ? "es" : ""}: ${(Array.isArray(boxes) ? boxes : []).map(b => String(b).padStart(3, "0")).join(", ")}</p>`
-      : (Array.isArray(boxes) ? boxes : [])
-          .map(b => `<span style="background:#fde047;padding:8px 14px;margin:4px;border-radius:6px;font-weight:bold;display:inline-block">${String(b).padStart(3, "0")}</span>`)
-          .join("");
+    const count = qty || 1;
 
     const priceBreakdownHtml = resolvedPackCfg.isKit
-      ? `<p style="margin:4px 0"><b>${kitCount} Kit${kitCount > 1 ? "s" : ""}:</b> ₹${resolvedPackCfg.pricePerBox.toLocaleString("en-IN")}/kit × ${kitCount} = <span style="color:#16a34a;font-size:18px;font-weight:900">₹${pkg.price.toLocaleString("en-IN")}</span></p>`
+      ? `<p style="margin:4px 0"><b>${count} Kit${count > 1 ? "s" : ""}:</b> ₹${resolvedPackCfg.pricePerBox.toLocaleString("en-IN")}/kit × ${count} = <span style="color:#16a34a;font-size:18px;font-weight:900">₹${pkg.price.toLocaleString("en-IN")}</span></p>`
       : `
-        <p style="margin:4px 0"><b>Boxes:</b> ${Array.isArray(boxes) ? boxes.length : 1} × ${resolvedPackCfg.soapsPerBox} soaps = ${pkg.soaps} soaps total</p>
+        <p style="margin:4px 0"><b>Quantity:</b> ${count} × ${resolvedPackCfg.soapsPerBox} soaps = ${pkg.soaps} soaps total</p>
         <p style="margin:4px 0"><b>Price/box:</b> ₹${resolvedPackCfg.pricePerBox.toLocaleString("en-IN")} ${resolvedPackCfg.mrpPerBox ? `(MRP ₹${resolvedPackCfg.mrpPerBox.toLocaleString("en-IN")})` : ""}</p>
         <p style="margin:4px 0"><b>Amount Paid:</b> <span style="color:#16a34a;font-size:18px;font-weight:900">₹${pkg.price.toLocaleString("en-IN")}</span></p>
         ${pkg.savings > 0 ? `<p style="margin:4px 0;color:#16a34a;font-weight:700">💰 You saved ₹${pkg.savings.toLocaleString("en-IN")}</p>` : ""}
@@ -972,12 +877,10 @@ app.post("/verify-payment", async (req, res) => {
       ${priceBreakdownHtml}
     </div>
     <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0">
-    <h3 style="color:#f97316;margin:0 0 12px">${resolvedPackCfg.isKit ? "🔴 Your Kit" : "🎯 Lucky Box Numbers"}</h3>
-    <div style="margin-bottom:16px">${boxesHtml}</div>
     <div style="background:#f0fdf4;padding:16px 20px;border-left:4px solid #16a34a;border-radius:10px;font-size:14px">
       ${resolvedPackCfg.isKit
-        ? `🎁 Your <b>Red Sandal Premium Kit${kitCount > 1 ? "s" : ""}</b> ${kitCount > 1 ? "are" : "is"} confirmed. We will dispatch soon!`
-        : "🎁 Your lucky draw boxes are successfully booked. Best of luck for the <b>Gold Lucky Draw</b>!"
+        ? `🎁 Your <b>Red Sandal Premium Kit${count > 1 ? "s" : ""}</b> ${count > 1 ? "are" : "is"} confirmed. We will dispatch soon!`
+        : "🎁 Your order is successfully booked. We will dispatch it soon!"
       }
     </div>
     <br>
@@ -1010,8 +913,7 @@ app.post("/verify-payment", async (req, res) => {
     <h3 style="color:#16a34a;margin:0 0 10px">Order</h3>
     <p style="margin:4px 0"><b>Payment ID:</b> ${razorpay_payment_id}</p>
     <p style="margin:4px 0"><b>Pack:</b> ${pkg.label} (${resolvedPackType})</p>
-    <p style="margin:4px 0"><b>Lucky Boxes:</b> ${Array.isArray(boxes) ? boxes.join(", ") : "—"}</p>
-    <p style="margin:4px 0"><b>Box / Kit Count:</b> ${Array.isArray(boxes) ? boxes.length : 1}</p>
+    <p style="margin:4px 0"><b>Quantity / Kit Count:</b> ${count}</p>
     <p style="margin:4px 0"><b>Soaps/Products:</b> ${pkg.soaps}</p>
     <p style="margin:4px 0"><b>Price/Unit:</b> ₹${resolvedPackCfg.pricePerBox.toLocaleString("en-IN")} ${resolvedPackCfg.isKit ? "per kit" : "per box"}</p>
     ${resolvedPackCfg.mrpPerBox ? `<p style="margin:4px 0"><b>MRP/Box:</b> ₹${resolvedPackCfg.mrpPerBox.toLocaleString("en-IN")}</p>` : ""}
@@ -1033,7 +935,7 @@ app.post("/verify-payment", async (req, res) => {
           "1": String(customer.fullName || "Customer"),
           "2": String(razorpay_payment_id || ""),
           "3": String(pkg.label          || ""),
-          "4": String(Array.isArray(boxes) ? boxes.length : 1),
+          "4": String(count              || 1),
           "5": String(pkg.soaps          || 0),
           "6": String(pkg.price          || 0),
         }),
@@ -1051,60 +953,9 @@ app.post("/verify-payment", async (req, res) => {
   }
 });
 
-/* ─── Reserve boxes endpoint ─── */
-app.post("/reserve-boxes", async (req, res) => {
-  try {
-    const { boxes } = req.body;
-    if (!Array.isArray(boxes) || boxes.length === 0) {
-      return res.status(400).json({ success: false, message: "boxes array required" });
-    }
-
-    const boxIntegers = boxes.map(b => parseInt(b, 10)).filter(n => !isNaN(n));
-
-    const { data, error } = await supabase
-      .from("grid_boxes")
-      .update({ status: "reserved", reserved_at: new Date().toISOString() })
-      .in("box_number", boxIntegers)
-      .eq("status", "available")
-      .select("box_number");
-
-    if (error) return res.status(500).json({ success: false, message: error.message });
-
-    const reservedNums = data?.map(d => d.box_number) || [];
-    console.log(`🔒 Reserved boxes: [${reservedNums.join(", ")}]`);
-    res.json({ success: true, reserved: reservedNums });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-/* ─── Manual reserve release (admin utility) ─── */
-app.post("/admin/release-reserved", async (req, res) => {
-  try {
-    const { box_numbers } = req.body;
-
-    let query = supabase.from("grid_boxes").update({ status: "available", reserved_at: null });
-
-    if (Array.isArray(box_numbers) && box_numbers.length > 0) {
-      query = query.in("box_number", box_numbers).eq("status", "reserved");
-    } else {
-      const cutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-      query = query.eq("status", "reserved").lt("reserved_at", cutoff);
-    }
-
-    const { data, error } = await query.select("box_number");
-    if (error) return res.status(500).json({ success: false, message: error.message });
-
-    res.json({ success: true, released: data?.map(d => d.box_number) || [] });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
 /* ─── Start ─── */
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🚀 Diya Soaps backend running on port ${PORT}`);
   console.log(`📦 Pack config loaded: ${Object.keys(PACK_CONFIG).join(", ")}`);
-  console.log(`⏳ Reserved box auto-release: every 60s (5-min TTL)`);
 });

@@ -5,7 +5,7 @@ export default function Terms() {
     <div className="bg-gray-50 min-h-screen">
       <Helmet>
         <title>Terms & Conditions - Diya Soap | Quality Ayurvedic Products</title>
-        <meta name="description" content="Review the Terms and Conditions of Diya Soap. Understand our policies on orders, pricing, and our exclusive gold lucky draw." />
+        <meta name="description" content="Review the Terms and Conditions of Diya Soap. Understand our policies on orders and pricing." />
       </Helmet>
 
       {/* Hero Section */}
@@ -48,15 +48,7 @@ export default function Terms() {
             </p>
           </section>
 
-          {/* Lucky Draw */}
-          <section>
-            <h2 className="text-xl font-semibold mb-2">Lucky Draw</h2>
-            <p>
-              Participation in lucky draws is automatic with eligible purchases.
-              Winners are selected fairly and transparently during announced
-              live sessions. Our decision regarding winners is final.
-            </p>
-          </section>
+
 
           {/* Payments */}
           <section>

@@ -514,12 +514,10 @@
 // };
 
 // export default ShopSection;
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import GridSection from "./GridSection";
 import RegistrationModal from "./RegistrationModal";
 
-const TOTAL_MEMBERS = 250;
 const TEST_MODE = false;
 
 // ─── Prices (per-box) ────────────────────────────────────────────────────────
@@ -552,12 +550,10 @@ const kitItems = [
 ];
 
 type Offer = "SINGLE" | "THREE" | "SIX";
-type Step  = "SHOP" | "GRID" | "REGISTER";
+type Step  = "SHOP" | "REGISTER";
 
 type ActivePlan = {
   packType:    "NORMAL" | "HALF_YEAR" | "ANNUAL" | "RED_SANDAL";
-  maxBoxes:    number;
-  instruction: string;
   planTitle:   string;
   totalPrice:  number;
   qty:         number;
@@ -612,15 +608,12 @@ const plans = [
 const ShopSection: React.FC = () => {
   const topRef = useRef<HTMLDivElement>(null);
 
-  const [members,    setMembers]    = useState(0);
-  const [loading,    setLoading]    = useState(true);
   const [quantities, setQuantities] = useState<Record<Offer, number>>({ SINGLE: 1, THREE: 1, SIX: 1 });
   const [kitAdded,   setKitAdded]   = useState(false);
   const [kitQty,     setKitQty]     = useState(1);
   const [boughtOffer,setBoughtOffer]= useState<Offer | null>(null);
   const [step,       setStep]       = useState<Step>("SHOP");
   const [activePlan, setActivePlan] = useState<ActivePlan | null>(null);
-  const [selectedBoxes, setSelectedBoxes] = useState<number[]>([]);
 
   const scrollToSectionTop = () => {
     if (topRef.current) {
@@ -629,22 +622,6 @@ const ShopSection: React.FC = () => {
     }
   };
 
-  /* ── Fetch member count ── */
-  const fetchMembers = async () => {
-    try {
-      const res  = await fetch(`${BACKEND_URL}/members`);
-      const data = await res.json();
-      setMembers(data.total || 0);
-    } catch { setMembers(0); }
-    finally { setLoading(false); }
-  };
-
-  useEffect(() => {
-    fetchMembers();
-    const id = setInterval(fetchMembers, 10_000);
-    return () => clearInterval(id);
-  }, []);
-
   const updateQty = (offer: Offer, delta: number) =>
     setQuantities(prev => ({ ...prev, [offer]: Math.max(1, prev[offer] + delta) }));
 
@@ -652,16 +629,12 @@ const ShopSection: React.FC = () => {
   const handleBuy = (plan: (typeof plans)[0]) => {
     setBoughtOffer(plan.offer);
     const qty        = quantities[plan.offer];
-    const totalBoxes = qty;
     const totalPrice = plan.pricePerBox * qty;
-    const totalMRP   = plan.mrpPerBox  ? plan.mrpPerBox * qty : null;
 
     setTimeout(() => {
       setBoughtOffer(null);
       setActivePlan({
         packType:    plan.packType,
-        maxBoxes:    totalBoxes,
-        instruction: `Select ${totalBoxes} lucky box${totalBoxes > 1 ? "es" : ""} for your ${plan.title} ${plan.subtitle} (${plan.soapsPerBox} soap${plan.soapsPerBox > 1 ? "s" : ""} per box)`,
         planTitle:   `${plan.title} ${plan.subtitle}`,
         totalPrice,
         qty,
@@ -669,8 +642,7 @@ const ShopSection: React.FC = () => {
         pricePerBox: plan.pricePerBox,
         mrpPerBox:   plan.mrpPerBox,
       });
-      setSelectedBoxes([]);
-      setStep("GRID");
+      setStep("REGISTER");
       setTimeout(scrollToSectionTop, 80);
     }, 400);
   };
@@ -682,8 +654,6 @@ const ShopSection: React.FC = () => {
       setKitAdded(false);
       setActivePlan({
         packType:    "RED_SANDAL",
-        maxBoxes:    kitQty,
-        instruction: `Select ${kitQty} lucky box${kitQty > 1 ? "es" : ""} for your Red Sandal Premium Kit`,
         planTitle:   "Red Sandal Premium Kit",
         totalPrice:  PRICE_KIT * kitQty,
         qty:         kitQty,
@@ -691,25 +661,13 @@ const ShopSection: React.FC = () => {
         pricePerBox: PRICE_KIT,
         mrpPerBox:   null,
       });
-      setSelectedBoxes([]);
-      setStep("GRID");
+      setStep("REGISTER");
       setTimeout(scrollToSectionTop, 80);
     }, 400);
   };
 
-  const handleBoxesSelected = (boxes: number[]) => {
-    setSelectedBoxes(boxes);
-    setStep("REGISTER");
-    setTimeout(scrollToSectionTop, 80);
-  };
-
-  const handleBackToGrid  = () => { setSelectedBoxes([]); setStep("GRID");  setTimeout(scrollToSectionTop, 80); };
-  const handleBackToShop  = () => { setStep("SHOP"); setActivePlan(null); setSelectedBoxes([]); setTimeout(scrollToSectionTop, 80); };
+  const handleBackToShop  = () => { setStep("SHOP"); setActivePlan(null); setTimeout(scrollToSectionTop, 80); };
   const handleSuccess = (_orderId: string) => handleBackToShop();
-
-  const remainder = members % TOTAL_MEMBERS;
-  const nextDraw  = remainder === 0 ? TOTAL_MEMBERS : TOTAL_MEMBERS - remainder;
-  const progress  = Math.round(((members % TOTAL_MEMBERS) / TOTAL_MEMBERS) * 100);
 
   /* ── Step bar ── */
   const StepBar = () => (
@@ -720,15 +678,15 @@ const ShopSection: React.FC = () => {
       position: "sticky", top: 0, zIndex: 200,
       boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
     }}>
-      <button onClick={step === "GRID" ? handleBackToShop : handleBackToGrid}
+      <button onClick={handleBackToShop}
         style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.18)", border: "1.5px solid rgba(255,255,255,0.4)", borderRadius: 10, padding: "8px 16px", color: "#fff", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "'Nunito', sans-serif", flexShrink: 0 }}>
-        ← {step === "GRID" ? "Back to Shop" : "Change Box"}
+        ← Back to Shop
       </button>
 
       <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap" }}>
-        {(["1. Shop", "2. Select Box", "3. Register & Pay"] as const).map((label, i) => {
-          const active = (step === "GRID" && i === 1) || (step === "REGISTER" && i === 2);
-          const done   = (step === "GRID" && i === 0) || (step === "REGISTER" && i <= 1);
+        {(["1. Shop", "2. Register & Pay"] as const).map((label, i) => {
+          const active = (step === "REGISTER" && i === 1);
+          const done   = (step === "REGISTER" && i === 0);
           return (
             <React.Fragment key={label}>
               <div style={{
@@ -738,7 +696,7 @@ const ShopSection: React.FC = () => {
               }}>
                 {done && !active ? "✓ " + label.slice(3) : label}
               </div>
-              {i < 2 && <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 13 }}>›</span>}
+              {i < 1 && <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 13 }}>›</span>}
             </React.Fragment>
           );
         })}
@@ -764,22 +722,13 @@ const ShopSection: React.FC = () => {
   return (
     <div ref={topRef} id="shop" style={{ fontFamily: "'Nunito','Segoe UI',sans-serif" }}>
 
-      {step === "GRID" && activePlan && (
-        <>
-          <StepBar />
-          <GridSection onBoxesSelected={handleBoxesSelected} instruction={activePlan.instruction} maxSelectable={activePlan.maxBoxes} />
-        </>
-      )}
-
       {step === "REGISTER" && activePlan && (
         <>
           <StepBar />
-          <GridSection onBoxesSelected={handleBoxesSelected} instruction={activePlan.instruction} maxSelectable={activePlan.maxBoxes} />
           <RegistrationModal
-            selectedBoxes={selectedBoxes}
             offerPack={activePlan.packType === "NORMAL" ? null : activePlan.packType}
             qty={activePlan.qty}
-            onClose={handleBackToGrid}
+            onClose={handleBackToShop}
             onSuccess={handleSuccess}
           />
         </>
@@ -799,11 +748,11 @@ const ShopSection: React.FC = () => {
               </motion.p>
               <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
                 style={{ fontSize: "clamp(2rem,6vw,3.5rem)", fontWeight: 900, color: "#fff", lineHeight: 1.15, margin: "0 auto 12px", maxWidth: 680 }}>
-                Shop &amp; Win Rewards
+                Premium Ayurvedic Care
               </motion.h1>
               <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
                 style={{ color: "rgba(255,255,255,0.75)", fontSize: 15, marginBottom: 0 }}>
-                Premium Natural Soaps + Gold Lucky Draw Every 250 Members
+                Discover our Natural Sandal Soaps
               </motion.p>
             </div>
           </div>
@@ -813,9 +762,8 @@ const ShopSection: React.FC = () => {
             <div style={{ background: "#fff", borderRadius: 18, border: "1.5px solid #fde68a", padding: "18px 22px", boxShadow: "0 4px 20px rgba(217,119,6,0.07)", display: "flex", flexWrap: "wrap", gap: 16, justifyContent: "center" }}>
               {[
                 { n: "1", icon: "🛒", label: "Choose a Pack",  desc: "Pick pack, adjust quantity with +/−" },
-                { n: "2", icon: "🎯", label: "Pick Lucky Box", desc: "Select your box number from the grid" },
-                { n: "3", icon: "📋", label: "Register & Pay", desc: "Fill details and pay securely" },
-                { n: "4", icon: "🏆", label: "Win Gold Prize", desc: "Lucky draw every 250 members!" },
+                { n: "2", icon: "📋", label: "Register & Pay", desc: "Fill details and pay securely" },
+                { n: "3", icon: "🚚", label: "Fast Delivery",  desc: "Delivered safely to your doorstep" },
               ].map(s => (
                 <div key={s.n} style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 165 }}>
                   <div style={{ width: 38, height: 38, borderRadius: 11, background: "linear-gradient(135deg,#fbbf24,#d97706)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>{s.icon}</div>
@@ -919,7 +867,7 @@ const ShopSection: React.FC = () => {
                           <button onClick={() => updateQty(plan.offer, 1)} style={{ width: 40, height: 40, border: "none", background: "transparent", fontSize: 20, color: plan.isBest ? "#fff" : "#d97706", cursor: "pointer", fontWeight: 900 }}>+</button>
                         </div>
                         <p style={{ margin: "4px 0 0", fontSize: 10, color: plan.isBest ? "rgba(255,255,255,0.55)" : "#aaa" }}>
-                          → Select {qty} lucky box{qty > 1 ? "es" : ""} ({totalSoaps} soap{totalSoaps > 1 ? "s" : ""} total)
+                          → Total: {totalSoaps} soap{totalSoaps > 1 ? "s" : ""}
                         </p>
                       </div>
 
@@ -938,7 +886,7 @@ const ShopSection: React.FC = () => {
                         <AnimatePresence mode="wait">
                           {boughtOffer === plan.offer
                             ? <motion.span key="a" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ display: "block" }}>⏳ Loading…</motion.span>
-                            : <motion.span key="b" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ display: "block" }}>🎯 Select {qty} Lucky Box{qty > 1 ? "es" : ""} — ₹{offerTotal.toLocaleString()} →</motion.span>
+                            : <motion.span key="b" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ display: "block" }}>🛒 Buy Now — ₹{offerTotal.toLocaleString()} →</motion.span>
                           }
                         </AnimatePresence>
                       </motion.button>
@@ -978,7 +926,7 @@ const ShopSection: React.FC = () => {
                 <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 22, background: "rgba(0,0,0,0.25)", borderRadius: 20, padding: "22px 28px", border: "1px solid rgba(255,255,255,0.12)" }}>
                   <div>
                     <p style={{ margin: 0, color: "rgba(255,255,255,0.45)", fontSize: 9, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase" }}>
-                      Complete Kit Price · {kitQty} kit{kitQty > 1 ? "s" : ""} · {kitQty} lucky box{kitQty > 1 ? "es" : ""} included
+                      Complete Kit Price · {kitQty} kit{kitQty > 1 ? "s" : ""}
                     </p>
                     <div style={{ display: "flex", alignItems: "baseline", gap: 4, margin: "6px 0 7px" }}>
                       <span style={{ fontSize: 18, color: "#fbbf24", fontWeight: 700 }}>₹</span>
@@ -1014,7 +962,7 @@ const ShopSection: React.FC = () => {
                         >+</button>
                       </div>
                       <p style={{ margin: "5px 0 0", fontSize: 10, color: "rgba(255,255,255,0.5)" }}>
-                        → {kitQty * 14} products · {kitQty} lucky box{kitQty > 1 ? "es" : ""}
+                        → {kitQty * 14} products
                       </p>
                     </div>
                   </div>
@@ -1033,33 +981,7 @@ const ShopSection: React.FC = () => {
             </motion.div>
           </div>
 
-          {/* DRAW COUNTER */}
-          <div style={{ maxWidth: 660, margin: "0 auto 80px", padding: "0 20px" }}>
-            <motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-              style={{ background: "#fff", borderRadius: 24, padding: "34px 32px 28px", boxShadow: "0 8px 40px rgba(217,119,6,0.12)", border: "1.5px solid #fde68a", textAlign: "center" }}>
-              <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 700, color: "#d97706", letterSpacing: "0.25em", textTransform: "uppercase" }}>✦ Live Draw Counter ✦</p>
-              <motion.p animate={{ scale: [1, 1.01, 1] }} transition={{ repeat: Infinity, duration: 2.5 }}
-                style={{ fontSize: 44, fontWeight: 900, color: "#111", margin: "12px 0 2px", lineHeight: 1 }}>
-                {loading ? <span style={{ color: "#ddd" }}>—</span> : <>👥 {members.toLocaleString()}</>}
-              </motion.p>
-              <p style={{ color: "#aaa", fontSize: 13, margin: "0 0 22px" }}>Total Members Joined</p>
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ height: 9, background: "#fef9c3", borderRadius: 99, overflow: "hidden" }}>
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} transition={{ duration: 1.2, ease: "easeOut" }}
-                    style={{ height: "100%", background: "linear-gradient(90deg,#fbbf24,#d97706)", borderRadius: 99 }} />
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5, fontSize: 10, color: "#bbb" }}>
-                  <span>0</span><span>{TOTAL_MEMBERS}</span>
-                </div>
-              </div>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "#fffbeb", border: "1.5px solid #fde68a", borderRadius: 11, padding: "8px 18px" }}>
-                <span style={{ fontSize: 16 }}>🎯</span>
-                <p style={{ margin: 0, fontSize: 13, color: "#92400e", fontWeight: 700 }}>
-                  Next draw in <span style={{ color: "#d97706", fontSize: 18, fontWeight: 900 }}>{nextDraw}</span> more members
-                </p>
-              </div>
-            </motion.div>
-          </div>
+
 
         </section>
       )}

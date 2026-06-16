@@ -39,20 +39,8 @@ export default function Footer() {
               </li>
 
               <li>
-                <button onClick={() => scrollTo("grid")} className="hover:text-amber-400">
-                  Every 250
-                </button>
-              </li>
-
-              <li>
                 <button onClick={() => scrollTo("shop")} className="hover:text-amber-400">
                   Shop
-                </button>
-              </li>
-
-              <li>
-                <button onClick={() => scrollTo("luckyDraw")} className="hover:text-amber-400">
-                  Lucky Draw
                 </button>
               </li>
 

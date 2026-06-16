@@ -461,7 +461,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2 } from "lucide-react";
-import { supabase } from "../lib/supabase";
 
 const BACKEND_URL =
   import.meta.env.VITE_API_URL ||
@@ -485,7 +484,6 @@ const PACK_INFO: Record<NonNullable<OfferPack> | "NORMAL", {
 };
 
 interface Props {
-  selectedBoxes: number[];
   offerPack:     OfferPack;
   qty?:          number;
   onClose:       () => void;
@@ -507,14 +505,12 @@ const INIT: FormState = {
   houseNo: "", street: "", city: "", pincode: "",
 };
 
-export default function RegistrationModal({ selectedBoxes, offerPack, qty = 1, onClose, onSuccess }: Props) {
+export default function RegistrationModal({ offerPack, qty = 1, onClose, onSuccess }: Props) {
   const packKey = offerPack ?? "NORMAL";
   const info    = PACK_INFO[packKey];
 
   // ─── Derived values ────────────────────────────────────────────────────────
-  // For RED_SANDAL: qty = number of kits ordered (from kitQty in ShopSection)
-  // For normal packs: selectedBoxes.length = number of boxes
-  const boxCount   = selectedBoxes.length || qty;
+  const boxCount   = qty;
   const totalSoaps = info.soapsPerBox * boxCount;
   const totalPrice = info.pricePerBox * boxCount;
   const totalMRP   = info.mrpPerBox ? info.mrpPerBox * boxCount : null;
@@ -560,21 +556,12 @@ export default function RegistrationModal({ selectedBoxes, offerPack, qty = 1, o
     setPayStep("PROCESSING");
 
     try {
-      /* 1. Reserve boxes */
-      if (packKey !== "RED_SANDAL") {
-        const { error: re } = await supabase
-          .from("grid_boxes")
-          .update({ status: "reserved", reserved_at: new Date().toISOString() })
-          .in("box_number", selectedBoxes);
-        if (re) throw new Error("Failed to reserve boxes.");
-      }
-
-      /* 2. Create Razorpay order */
+      /* 1. Create Razorpay order */
       const or = await fetch(`${BACKEND_URL}/create-order`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          boxes:    selectedBoxes,
+          qty:      boxCount,
           packType: packKey,
           amount:   totalPrice * 100,
         }),
@@ -582,10 +569,10 @@ export default function RegistrationModal({ selectedBoxes, offerPack, qty = 1, o
       if (!or.ok) throw new Error("Failed to create payment order.");
       const { id: rzpOrderId } = await or.json();
 
-      /* 3. Load Razorpay SDK */
+      /* 2. Load Razorpay SDK */
       if (!await loadRzp()) throw new Error("Payment gateway failed to load.");
 
-      /* 4. Open checkout */
+      /* 3. Open checkout */
       await new Promise<void>((resolve, reject) => {
         const fullAddress = `${form.houseNo}, ${form.street}, ${form.city} - ${form.pincode}`;
         const rzp = new window.Razorpay({
@@ -596,7 +583,7 @@ export default function RegistrationModal({ selectedBoxes, offerPack, qty = 1, o
           description: `${info.label} — ${totalSoaps} ${packKey === "RED_SANDAL" ? "products" : "soaps"} · ₹${totalPrice.toLocaleString()}`,
           order_id:    rzpOrderId,
           prefill:     { name: form.fullName, contact: form.mobile, email: form.email || undefined },
-          notes:       { boxes: selectedBoxes.join(","), pack: packKey, address: fullAddress },
+          notes:       { pack: packKey, address: fullAddress },
           theme:       { color: "#d97706" },
 
           handler: async (response: any) => {
@@ -609,7 +596,7 @@ export default function RegistrationModal({ selectedBoxes, offerPack, qty = 1, o
                   razorpay_order_id:   response.razorpay_order_id,
                   razorpay_payment_id: response.razorpay_payment_id,
                   razorpay_signature:  response.razorpay_signature,
-                  boxes:   selectedBoxes,
+                  qty:     boxCount,
                   pack:    packKey,
                   orderId: response.razorpay_payment_id,
                   customer: {
@@ -626,45 +613,22 @@ export default function RegistrationModal({ selectedBoxes, offerPack, qty = 1, o
               });
               if (!vr.ok) throw new Error("Payment verification failed.");
 
-              /* Mark boxes as booked */
-              if (packKey !== "RED_SANDAL") {
-                await supabase
-                  .from("grid_boxes")
-                  .update({
-                    status:         "booked",
-                    customer_name:  form.fullName,
-                    customer_phone: form.mobile,
-                    order_id:       response.razorpay_payment_id,
-                    booked_at:      new Date().toISOString(),
-                  })
-                  .in("box_number", selectedBoxes);
-              }
-
               setPaidId(response.razorpay_payment_id || rzpOrderId);
               setPayStep("SUCCESS");
               resolve();
             } catch (err: any) {
-              if (packKey !== "RED_SANDAL") {
-                await supabase.from("grid_boxes").update({ status: "available", reserved_at: null }).in("box_number", selectedBoxes);
-              }
               reject(err);
             }
           },
 
           modal: {
             ondismiss: async () => {
-              if (packKey !== "RED_SANDAL") {
-                await supabase.from("grid_boxes").update({ status: "available", reserved_at: null }).in("box_number", selectedBoxes);
-              }
               reject(new Error("Payment cancelled"));
             },
           },
         });
 
         rzp.on("payment.failed", async (r: any) => {
-          if (packKey !== "RED_SANDAL") {
-            await supabase.from("grid_boxes").update({ status: "payment_failed" }).in("box_number", selectedBoxes);
-          }
           reject(new Error(r.error?.description || "Payment failed"));
         });
 
@@ -686,7 +650,7 @@ export default function RegistrationModal({ selectedBoxes, offerPack, qty = 1, o
         <div style={{ background: "linear-gradient(135deg,#16a34a,#15803d)", padding: "32px 28px 24px", textAlign: "center" }}>
           <motion.div initial={{ scale: 0 }} animate={{ scale: [0, 1.3, 1] }} transition={{ duration: 0.5, delay: 0.1 }} style={{ fontSize: 60, marginBottom: 10 }}>✅</motion.div>
           <h2 style={{ margin: 0, color: "#fff", fontSize: 24, fontWeight: 900 }}>Payment Successful!</h2>
-          <p style={{ margin: "6px 0 0", color: "rgba(255,255,255,0.8)", fontSize: 13 }}>Order confirmed · Boxes are booked</p>
+          <p style={{ margin: "6px 0 0", color: "rgba(255,255,255,0.8)", fontSize: 13 }}>Order confirmed</p>
         </div>
         <div style={{ padding: "24px 28px 28px" }}>
           <div style={{ background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: 12, padding: "12px 16px", marginBottom: 14, textAlign: "center" }}>
@@ -737,16 +701,6 @@ export default function RegistrationModal({ selectedBoxes, offerPack, qty = 1, o
               </div>
             )}
 
-            {packKey !== "RED_SANDAL" && (
-              <p style={{ margin: "5px 0 2px", fontSize: 11, color: "#78350f" }}>
-                🎯 Box{boxCount > 1 ? "es" : ""}: <strong>{selectedBoxes.map(b => String(b).padStart(3, "0")).join(", ")}</strong>
-              </p>
-            )}
-            {packKey === "RED_SANDAL" && (
-              <p style={{ margin: "5px 0 2px", fontSize: 11, color: "#78350f" }}>
-                🎯 Lucky Box{selectedBoxes.length > 1 ? "es" : ""}: <strong>{selectedBoxes.map(b => String(b).padStart(3, "0")).join(", ")}</strong>
-              </p>
-            )}
             <p style={{ margin: "4px 0 0", fontSize: 11, color: "#78350f" }}>👤 {form.fullName} · 📱 {form.mobile}</p>
             <p style={{ margin: "2px 0 0", fontSize: 11, color: "#78350f" }}>🏠 {form.houseNo}, {form.street}, {form.city} - {form.pincode}</p>
           </div>
@@ -755,7 +709,6 @@ export default function RegistrationModal({ selectedBoxes, offerPack, qty = 1, o
             {[
               "📱 WhatsApp confirmation coming shortly",
               "🚚 Dispatched within 2–3 business days",
-              "🏆 Lucky draw entry confirmed!",
               "🐄 10% of purchase goes to Goshala",
             ].map((t, i, a) => (
               <p key={i} style={{ margin: i < a.length - 1 ? "0 0 5px" : 0, fontSize: 11, color: "#64748b" }}>{t}</p>
@@ -851,23 +804,6 @@ export default function RegistrationModal({ selectedBoxes, offerPack, qty = 1, o
                     {" = "}<strong style={{ color: "#fbbf24" }}>₹{totalPrice.toLocaleString()}</strong>
                   </p>
                 </div>
-              )}
-
-              {packKey !== "RED_SANDAL" && (
-                <p style={{ margin: "6px 0 0", fontSize: 11, color: "rgba(255,255,255,0.8)" }}>
-                  🎯 Box{boxCount > 1 ? "es" : ""}:{" "}
-                  <strong style={{ color: "#fbbf24" }}>
-                    {selectedBoxes.map(b => String(b).padStart(3, "0")).join(", ")}
-                  </strong>
-                </p>
-              )}
-              {packKey === "RED_SANDAL" && (
-                <p style={{ margin: "6px 0 0", fontSize: 11, color: "rgba(255,255,255,0.8)" }}>
-                  🎯 Lucky Box{selectedBoxes.length > 1 ? "es" : ""}:{" "}
-                  <strong style={{ color: "#fbbf24" }}>
-                    {selectedBoxes.map(b => String(b).padStart(3, "0")).join(", ")}
-                  </strong>
-                </p>
               )}
             </div>
           </div>

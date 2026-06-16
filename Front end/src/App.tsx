@@ -11,7 +11,6 @@ import Hero from "./components/Hero";
 import ProductSection from "./components/ProductSection";
 import ProofSection from "./components/ProofSection";
 import VideosSection from "./components/VideosSection";
-import LuckyDrawSection from "./components/LuckyDrawSection";
 import ShopSection from "./components/ShopSection";
 import ContactSection from "./components/ContactSection";
 import Footer from "./components/Footer";
@@ -21,8 +20,6 @@ import AdminLogin from "./pages/AdminLogin";
 import ProtectedRoute from "./auth/ProtectedRoute";
 
 import useScrollReveal from "./hooks/useScrollReveal";
-
-import { SlotProvider } from "./context/SlotContext";
 
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Terms from "./pages/Terms";
@@ -37,7 +34,6 @@ function LandingPage() {
   const shopRef      = useRef<HTMLDivElement>(null);
   const proofRef     = useRef<HTMLDivElement>(null);
   const videosRef    = useRef<HTMLDivElement>(null);
-  const luckyDrawRef = useRef<HTMLDivElement>(null);
   const contactRef   = useRef<HTMLDivElement>(null);
 
   const navigate = useNavigate();
@@ -61,7 +57,6 @@ function LandingPage() {
       product:   productRef,
       proof:     proofRef,
       videos:    videosRef,
-      luckyDraw: luckyDrawRef,
       contact:   contactRef,
     };
 
@@ -76,7 +71,7 @@ function LandingPage() {
     <div className="min-h-screen bg-transparent">
       <Helmet>
         <title>Diya Soap - Premium Red Sandal Soap | Natural Ayurvedic Skincare</title>
-        <meta name="description" content="Pure Red Sandalwood Soap for naturally glowing skin. Ayurvedic, natural, and premium skincare by Diya Natural Products. Buy now and enter our gold lucky draw!" />
+        <meta name="description" content="Pure Red Sandalwood Soap for naturally glowing skin. Ayurvedic, natural, and premium skincare by Diya Natural Products. Buy now!" />
       </Helmet>
       <Navbar onNavigate={handleNavigate} />
       <TopTrustBar />
@@ -97,10 +92,6 @@ function LandingPage() {
           No separate GridSection or RegistrationModal needed */}
       <div id="shop" ref={shopRef} className="reveal">
         <ShopSection />
-      </div>
-
-      <div id="luckyDraw" ref={luckyDrawRef} className="reveal">
-        <LuckyDrawSection />
       </div>
 
       <div id="proof" ref={proofRef} className="reveal">
@@ -135,26 +126,24 @@ function LandingPage() {
 
 export default function App() {
   return (
-    <SlotProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/"             element={<LandingPage />} />
-          <Route path="/admin-login"  element={<AdminLogin />} />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute>
-                <AdminPanel />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/privacy"      element={<PrivacyPolicy />} />
-          <Route path="/terms"        element={<Terms />} />
-          <Route path="/refund"       element={<RefundPolicy />} />
-          <Route path="/shipping"     element={<ShippingPolicy />} />
-          <Route path="/contact-page" element={<ContactPage />} />
-        </Routes>
-      </BrowserRouter>
-    </SlotProvider>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/"             element={<LandingPage />} />
+        <Route path="/admin-login"  element={<AdminLogin />} />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <AdminPanel />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/privacy"      element={<PrivacyPolicy />} />
+        <Route path="/terms"        element={<Terms />} />
+        <Route path="/refund"       element={<RefundPolicy />} />
+        <Route path="/shipping"     element={<ShippingPolicy />} />
+        <Route path="/contact-page" element={<ContactPage />} />
+      </Routes>
+    </BrowserRouter>
   );
 }

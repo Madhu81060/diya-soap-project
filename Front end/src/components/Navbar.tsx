@@ -274,10 +274,8 @@ export default function Navbar({ onNavigate }: NavbarProps) {
 
   const menuItems = [
     { label: "Home",      section: "home" },
-    { label: "Every 250", section: "shop" },
     { label: "Product",   section: "product" },
     { label: "Shop",      section: "shop" },
-    { label: "Gold Drop", section: "luckyDraw", premium: true },
     { label: "Proof",     section: "proof" },
     { label: "Videos",    section: "videos" },
     { label: "Contact",   section: "contact" },

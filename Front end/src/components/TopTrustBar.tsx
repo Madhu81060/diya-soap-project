@@ -87,57 +87,6 @@ export default function TopTrustBar() {
 
       </div>
 
-      {/* 🔥 LAYER 3 — 250 MEMBERS DRAW */}
-      <div className="bg-yellow-100 border-t border-yellow-300">
-
-        <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-center gap-2 text-sm font-bold text-amber-900 text-center">
-
-          <Trophy size={16} className="text-yellow-700" />
-
-          Every 250 Members →
-          <span className="text-orange-700">
-            1 Lucky Winner Gets 1 Gram Gold Coin
-          </span>
-
-        </div>
-
-      </div>
-
-      {/* 🔥 LAYER 4 — GRAND DRAW SCROLLING */}
-      <div className="bg-black text-yellow-300 overflow-hidden">
-
-        <div className="whitespace-nowrap animate-marquee flex items-center gap-6 py-2 text-sm font-bold">
-
-          <Medal size={16} className="text-yellow-400 ml-4" />
-
-          🎉 GRAND 15,000 MEMBERS DRAW 🎉
-
-          🥇 1st Winner → 10 Grams Gold Coin
-
-          🥈 2nd Winner → 5 Grams Gold Coin
-
-          🎥 Live Lucky Draw on YouTube
-
-          ⭐ Transparent Selection Process
-
-        </div>
-
-      </div>
-
-      {/* 🔥 MARQUEE ANIMATION */}
-      <style>
-        {`
-          @keyframes marquee {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
-          }
-
-          .animate-marquee {
-            animation: marquee 22s linear infinite;
-          }
-        `}
-      </style>
-
     </div>
   );
 }
