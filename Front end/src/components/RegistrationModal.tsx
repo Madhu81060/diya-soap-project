@@ -660,7 +660,7 @@ export default function RegistrationModal({ offerPack, qty = 1, onClose, onSucce
 
           {/* ── ORDER SUMMARY ── */}
           <div style={{ background: "#fffbeb", border: "1.5px solid #fde68a", borderRadius: 12, padding: "14px 16px", marginBottom: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2">
               <div>
                 <p style={{ margin: 0, fontSize: 14, fontWeight: 900, color: "#92400e" }}>📦 {info.label}</p>
                 <p style={{ margin: "3px 0 0", fontSize: 12, color: "#a16207" }}>
@@ -670,7 +670,7 @@ export default function RegistrationModal({ offerPack, qty = 1, onClose, onSucce
                   }
                 </p>
               </div>
-              <div style={{ textAlign: "right" }}>
+              <div className="text-left sm:text-right mt-1 sm:mt-0">
                 {totalMRP && <p style={{ margin: 0, fontSize: 12, color: "#bbb", textDecoration: "line-through", fontWeight: 700 }}>MRP ₹{totalMRP.toLocaleString()}</p>}
                 <p style={{ margin: 0, fontSize: 18, fontWeight: 900, color: "#16a34a" }}>₹{totalPrice.toLocaleString()}</p>
               </div>
@@ -756,7 +756,7 @@ export default function RegistrationModal({ offerPack, qty = 1, onClose, onSucce
           style={{ background: "#fff", borderRadius: 26, width: "100%", maxWidth: 500, boxShadow: "0 24px 80px rgba(0,0,0,0.3)", overflow: "hidden" }}
         >
           {/* ── STICKY HEADER ── */}
-          <div style={{ background: "linear-gradient(135deg,#78350f,#d97706,#fbbf24)", padding: "20px 24px 16px", position: "sticky", top: 0, zIndex: 10 }}>
+          <div className="p-4 sm:p-[20px_24px_16px] sticky top-0 z-10" style={{ background: "linear-gradient(135deg,#78350f,#d97706,#fbbf24)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <div>
                 <p style={{ margin: 0, color: "rgba(255,255,255,0.65)", fontSize: 9, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase" }}>Step 3 of 3</p>
@@ -769,7 +769,7 @@ export default function RegistrationModal({ offerPack, qty = 1, onClose, onSucce
 
             {/* ── ORDER SUMMARY CARD ── */}
             <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 14, padding: "14px 16px", border: "1px solid rgba(255,255,255,0.18)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-[10px]">
                 <div>
                   <p style={{ margin: 0, fontSize: 14, fontWeight: 900, color: "#fff" }}>📦 {info.label}</p>
                   <p style={{ margin: "3px 0 0", fontSize: 12, color: "rgba(255,255,255,0.75)" }}>
@@ -779,7 +779,7 @@ export default function RegistrationModal({ offerPack, qty = 1, onClose, onSucce
                     }
                   </p>
                 </div>
-                <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 12 }}>
+                <div className="text-left sm:text-right shrink-0 sm:ml-3">
                   {totalMRP && <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.45)", textDecoration: "line-through", fontWeight: 700 }}>MRP ₹{totalMRP.toLocaleString()}</p>}
                   <p style={{ margin: 0, fontSize: 22, fontWeight: 900, color: "#fbbf24" }}>₹{totalPrice.toLocaleString()}</p>
                   {savings > 0 && <p style={{ margin: "2px 0 0", fontSize: 10, color: "#86efac", fontWeight: 700 }}>Save ₹{savings.toLocaleString()}</p>}
@@ -809,7 +809,7 @@ export default function RegistrationModal({ offerPack, qty = 1, onClose, onSucce
           </div>
 
           {/* ── FORM BODY ── */}
-          <div style={{ padding: "22px 24px 28px" }}>
+          <div className="p-4 sm:p-[22px_24px_28px]">
             <p style={{ margin: "0 0 16px", fontSize: 12, fontWeight: 800, color: "#78350f", textTransform: "uppercase", letterSpacing: "0.08em" }}>
               📋 Delivery &amp; Contact Details
             </p>
@@ -820,7 +820,7 @@ export default function RegistrationModal({ offerPack, qty = 1, onClose, onSucce
               <Field label="Email Address (optional)"      name="email"    value={form.email}    onChange={handleChange} placeholder="your@email.com"                  icon="✉️" error={errors.email}    type="email" />
               <Field label="House No. *"                   name="houseNo"  value={form.houseNo}  onChange={handleChange} placeholder="Door / House / Flat No."        icon="🏠" error={errors.houseNo} />
               <Field label="Street / Area *"               name="street"   value={form.street}   onChange={handleChange} placeholder="Street, Area, Landmark"          icon="🛣️" error={errors.street} />
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-[10px]">
                 <Field label="City *"    name="city"    value={form.city}    onChange={handleChange} placeholder="City"      icon="🏙️" error={errors.city} />
                 <Field label="Pincode *" name="pincode" value={form.pincode} onChange={handleChange} placeholder="6-digit"   icon="📮" error={errors.pincode} type="tel" maxLength={6} />
               </div>
