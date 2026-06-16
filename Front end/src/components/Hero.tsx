@@ -928,6 +928,12 @@ interface HeroSectionProps {
 }
 
 export default function HeroSection({ onJoinClick }: HeroSectionProps) {
+  const containerRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end start"]
+  });
+
   const imageY  = useTransform(scrollYProgress, [0, 1], [0, 80]);
   const textY   = useTransform(scrollYProgress, [0, 1], [0, 40]);
   const fadeOut = useTransform(scrollYProgress, [0, 0.65], [1, 0]);
