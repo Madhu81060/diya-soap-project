@@ -1,10 +1,8 @@
 import {
-  Trophy,
   Sparkles,
   Instagram,
   Facebook,
   Youtube,
-  Medal,
 } from "lucide-react";
 
 export default function TopTrustBar() {

@@ -2,11 +2,6 @@ import { supabase } from "../lib/supabase";
 
 const KEY = "DIYA_ADMIN_SESSION";
 
-type LoginResult = {
-  success: boolean;
-  admin?: any;
-};
-
 export const adminAuth = {
   // ✅ LOGIN
   async login(email: string, password: string): Promise<boolean> {
