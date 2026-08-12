@@ -9,6 +9,7 @@ import FloatingActions from "./components/FloatingActions";
 
 import Hero from "./components/Hero";
 import ProductSection from "./components/ProductSection";
+import NewLaunchSection from "./components/NewLaunchSection";
 import ProofSection from "./components/ProofSection";
 import VideosSection from "./components/VideosSection";
 import ShopSection from "./components/ShopSection";
@@ -31,6 +32,7 @@ function LandingPage() {
   useScrollReveal();
 
   const productRef   = useRef<HTMLDivElement>(null);
+  const newLaunchRef = useRef<HTMLDivElement>(null);
   const shopRef      = useRef<HTMLDivElement>(null);
   const proofRef     = useRef<HTMLDivElement>(null);
   const videosRef    = useRef<HTMLDivElement>(null);
@@ -54,10 +56,11 @@ function LandingPage() {
     }
 
     const refs: Record<string, React.RefObject<HTMLDivElement>> = {
-      product:   productRef,
-      proof:     proofRef,
-      videos:    videosRef,
-      contact:   contactRef,
+      product:      productRef,
+      "new-launch": newLaunchRef,
+      proof:        proofRef,
+      videos:       videosRef,
+      contact:      contactRef,
     };
 
     const ref = refs[section];
@@ -70,8 +73,8 @@ function LandingPage() {
   return (
     <div className="min-h-screen bg-transparent">
       <Helmet>
-        <title>Diya Soap - Premium Red Sandal Soap | Natural Ayurvedic Skincare</title>
-        <meta name="description" content="Pure Red Sandalwood Soap for naturally glowing skin. Ayurvedic, natural, and premium skincare by Diya Natural Products. Buy now!" />
+        <title>Diya Soap - Premium Red Sandal Soap & Ayurvedic Wellness | Natural Skincare</title>
+        <meta name="description" content="Pure Red Sandalwood Soap, Bath Powder, Shampoo, Body Lotion, Essential Oils & Ayurvedic skincare by Diya Natural Products. Buy now!" />
       </Helmet>
       <Navbar onNavigate={handleNavigate} />
       <TopTrustBar />
@@ -85,6 +88,10 @@ function LandingPage() {
           onProofClick={() => handleNavigate("proof")}
           onBuyClick={() => handleNavigate("shop")}
         />
+      </div>
+
+      <div id="new-launch" ref={newLaunchRef} className="reveal">
+        <NewLaunchSection onBuyClick={() => handleNavigate("shop")} />
       </div>
 
       {/* ShopSection is FULLY self-contained:
