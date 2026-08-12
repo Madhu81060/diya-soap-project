@@ -8,6 +8,7 @@ import TopTrustBar from "./components/TopTrustBar";
 import FloatingActions from "./components/FloatingActions";
 
 import Hero from "./components/Hero";
+import NewLaunch from "./components/NewLaunch";
 import ProductSection from "./components/ProductSection";
 import ProofSection from "./components/ProofSection";
 import VideosSection from "./components/VideosSection";
@@ -30,6 +31,7 @@ import ContactPage from "./pages/ContactPage";
 function LandingPage() {
   useScrollReveal();
 
+  const launchRef    = useRef<HTMLDivElement>(null);
   const productRef   = useRef<HTMLDivElement>(null);
   const shopRef      = useRef<HTMLDivElement>(null);
   const proofRef     = useRef<HTMLDivElement>(null);
@@ -54,6 +56,7 @@ function LandingPage() {
     }
 
     const refs: Record<string, React.RefObject<HTMLDivElement>> = {
+      launch:    launchRef,
       product:   productRef,
       proof:     proofRef,
       videos:    videosRef,
@@ -79,6 +82,10 @@ function LandingPage() {
       <section id="home" className="reveal">
         <Hero onJoinClick={() => handleNavigate("shop")} />
       </section>
+
+      <div id="newlaunch" ref={launchRef} className="reveal">
+        <NewLaunch onBuyKitClick={() => handleNavigate("shop")} />
+      </div>
 
       <div id="product" ref={productRef} className="reveal">
         <ProductSection

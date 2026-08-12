@@ -15,12 +15,13 @@ export default function Navbar({ onNavigate }: NavbarProps) {
   const phoneLabel  = "+91 81251 34699";
 
   const menuItems = [
-    { label: "Home",      section: "home" },
-    { label: "Product",   section: "product" },
-    { label: "Shop",      section: "shop" },
-    { label: "Proof",     section: "proof" },
-    { label: "Videos",    section: "videos" },
-    { label: "Contact",   section: "contact" },
+    { label: "Home",         section: "home" },
+    { label: "New Launches", section: "launch" },
+    { label: "Product",      section: "product" },
+    { label: "Shop",         section: "shop" },
+    { label: "Proof",        section: "proof" },
+    { label: "Videos",       section: "videos" },
+    { label: "Contact",      section: "contact" },
   ];
 
   const go = (section: string) => {
