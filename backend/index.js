@@ -145,6 +145,257 @@ app.get("/members", async (req, res) => {
   }
 });
 
+/* ─── User Signup (Uses members table) ─── */
+app.post("/signup", async (req, res) => {
+  try {
+    const { username, email, mobile, password } = req.body;
+
+    if (!username || !email || !mobile || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Username, email, mobile number, and password are required",
+      });
+    }
+
+    const cleanUsername = String(username).trim();
+    const cleanEmail = String(email).trim().toLowerCase();
+    
+    // Normalize mobile: remove non-digits and strip leading +91 / 91 if > 10 digits
+    let cleanMobile = String(mobile).replace(/\D/g, "");
+    if (cleanMobile.length > 10 && cleanMobile.startsWith("91")) {
+      cleanMobile = cleanMobile.slice(-10);
+    }
+
+    // Format validations
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      return res.status(400).json({ success: false, message: "Please enter a valid email address" });
+    }
+
+    if (cleanMobile.length !== 10) {
+      return res.status(400).json({ success: false, message: "Mobile number must be exactly 10 digits" });
+    }
+
+    if (cleanUsername.length < 2) {
+      return res.status(400).json({ success: false, message: "Name/Username must be at least 2 characters" });
+    }
+
+    if (String(password).length < 4) {
+      return res.status(400).json({ success: false, message: "Password must be at least 4 characters" });
+    }
+
+    // Check if member already exists in members table
+    const { data: existingMembers, error: checkErr } = await supabase
+      .from("members")
+      .select("id, full_name, email, mobile, password")
+      .or(`email.eq.${cleanEmail},mobile.eq.${cleanMobile}`);
+
+    if (checkErr && !checkErr.message.includes("password")) {
+      console.error("❌ Supabase member check error:", checkErr.message);
+      return res.status(500).json({ success: false, message: "Database error while verifying member" });
+    }
+
+    if (existingMembers && existingMembers.length > 0) {
+      const existing = existingMembers[0];
+
+      // If already has password set
+      if (existing.password) {
+        return res.status(400).json({
+          success: false,
+          message: "An account with this email or mobile already exists. Please log in.",
+        });
+      }
+
+      // If user had placed an order earlier, activate their account with the password
+      const { data: updatedMember, error: updateErr } = await supabase
+        .from("members")
+        .update({
+          full_name: cleanUsername || existing.full_name,
+          password: String(password),
+        })
+        .eq("id", existing.id)
+        .select("id, full_name, email, mobile, created_at")
+        .single();
+
+      if (updateErr) {
+        console.error("❌ Error updating member password:", updateErr.message);
+        if (updateErr.message.includes("password")) {
+          return res.status(500).json({
+            success: false,
+            message: "Please add 'password' column to members table in Supabase: ALTER TABLE public.members ADD COLUMN IF NOT EXISTS password text;",
+          });
+        }
+        return res.status(500).json({ success: false, message: "Failed to create account. Please try again." });
+      }
+
+      console.log(`✅ Member account activated: ${cleanUsername} (${cleanEmail})`);
+      return res.status(200).json({
+        success: true,
+        message: "Account created successfully",
+        user: {
+          id: updatedMember.id,
+          username: updatedMember.full_name || cleanUsername,
+          email: updatedMember.email,
+          mobile: updatedMember.mobile,
+          created_at: updatedMember.created_at,
+        },
+      });
+    }
+
+    // Insert new member
+    const memberPayload = {
+      full_name: cleanUsername,
+      email: cleanEmail,
+      mobile: cleanMobile,
+      password: String(password),
+      payment_status: "registered",
+      created_at: new Date().toISOString(),
+    };
+
+    const { data: newMember, error: insertErr } = await supabase
+      .from("members")
+      .insert(memberPayload)
+      .select("id, full_name, email, mobile, created_at")
+      .single();
+
+    if (insertErr) {
+      console.error("❌ Error inserting into members:", insertErr.message);
+      if (insertErr.message && insertErr.message.includes("password")) {
+        return res.status(500).json({
+          success: false,
+          message: "Please add 'password' column to members table in Supabase: ALTER TABLE public.members ADD COLUMN IF NOT EXISTS password text;",
+        });
+      }
+      return res.status(500).json({ success: false, message: "Failed to create account. Please try again." });
+    }
+
+    console.log(`✅ New member registered: ${cleanUsername} (${cleanEmail})`);
+    return res.status(201).json({
+      success: true,
+      message: "Account created successfully",
+      user: {
+        id: newMember.id,
+        username: newMember.full_name || cleanUsername,
+        email: newMember.email,
+        mobile: newMember.mobile,
+        created_at: newMember.created_at,
+      },
+    });
+  } catch (err) {
+    console.error("❌ Signup server error:", err.message || err);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
+/* ─── User Login (Supports Email OR Mobile + Password from members & admins) ─── */
+app.post("/login", async (req, res) => {
+  try {
+    const { identifier, password } = req.body;
+
+    if (!identifier || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter your email or mobile number, and password",
+      });
+    }
+
+    const rawIdentifier = String(identifier).trim();
+    const cleanEmail = rawIdentifier.toLowerCase();
+    
+    let cleanMobile = rawIdentifier.replace(/\D/g, "");
+    if (cleanMobile.length > 10 && cleanMobile.startsWith("91")) {
+      cleanMobile = cleanMobile.slice(-10);
+    }
+
+    // 1. Check members table
+    let memberQuery = `email.eq.${cleanEmail},full_name.eq.${cleanEmail}`;
+    if (cleanMobile.length === 10) {
+      memberQuery += `,mobile.eq.${cleanMobile}`;
+    }
+
+    const { data: members, error: memberErr } = await supabase
+      .from("members")
+      .select("id, full_name, email, mobile, password, created_at")
+      .or(memberQuery)
+      .order("created_at", { ascending: false });
+
+    if (memberErr && !memberErr.message.includes("password")) {
+      console.error("❌ Supabase member login error:", memberErr.message);
+    }
+
+    if (members && members.length > 0) {
+      // Find matching member with matching password
+      const matchingMember = members.find(
+        (m) => m.password && String(m.password) === String(password)
+      );
+
+      if (matchingMember) {
+        console.log(`✅ Member logged in: ${matchingMember.full_name} (${matchingMember.email || matchingMember.mobile})`);
+        return res.status(200).json({
+          success: true,
+          message: "Login successful",
+          user: {
+            id: matchingMember.id,
+            username: matchingMember.full_name || "Customer",
+            email: matchingMember.email || "",
+            mobile: matchingMember.mobile || "",
+            created_at: matchingMember.created_at,
+          },
+        });
+      }
+
+      // Check if user exists but has different or missing password
+      const hasAnyWithPass = members.some((m) => m.password);
+      if (hasAnyWithPass) {
+        return res.status(401).json({
+          success: false,
+          message: "Incorrect password. Please try again.",
+        });
+      } else {
+        return res.status(401).json({
+          success: false,
+          message: "No password set for this account. Please go to Create Account to set your password.",
+        });
+      }
+    }
+
+    // 2. Also check admins table (for administrator login)
+    const { data: admin, error: adminErr } = await supabase
+      .from("admins")
+      .select("id, name, email, password, status")
+      .eq("email", cleanEmail)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (admin) {
+      if (String(admin.password) === String(password)) {
+        console.log(`✅ Admin logged in: ${admin.name} (${admin.email})`);
+        return res.status(200).json({
+          success: true,
+          message: "Admin login successful",
+          user: {
+            id: admin.id,
+            username: admin.name,
+            email: admin.email,
+            mobile: "",
+            isAdmin: true,
+          },
+        });
+      } else {
+        return res.status(401).json({ success: false, message: "Incorrect password. Please try again." });
+      }
+    }
+
+    return res.status(401).json({
+      success: false,
+      message: "No account found matching this email or mobile number",
+    });
+  } catch (err) {
+    console.error("❌ Login server error:", err.message || err);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
 /* ─── Send Contact Mail ─── */
 app.post("/send-contact-mail", async (req, res) => {
   try {
