@@ -15,12 +15,13 @@ export default function Navbar({ onNavigate }: NavbarProps) {
   const phoneLabel  = "+91 81251 34699";
 
   const menuItems = [
-    { label: "Home",      section: "home" },
-    { label: "Product",   section: "product" },
-    { label: "Shop",      section: "shop" },
-    { label: "Proof",     section: "proof" },
-    { label: "Videos",    section: "videos" },
-    { label: "Contact",   section: "contact" },
+    { label: "Home",       section: "home" },
+    { label: "Products",   section: "product" },
+    { label: "New Launch", section: "new-launch", badge: "NEW" },
+    { label: "Shop",       section: "shop" },
+    { label: "Proof",      section: "proof" },
+    { label: "Videos",     section: "videos" },
+    { label: "Contact",    section: "contact" },
   ];
 
   const go = (section: string) => {
@@ -377,8 +378,12 @@ export default function Navbar({ onNavigate }: NavbarProps) {
                   className={`ds-menu-btn${isActive ? " active" : ""}`}
                   aria-current={isActive ? "page" : undefined}
                 >
-                  
                   {item.label}
+                  {item.badge && (
+                    <span className="ml-1 px-1.5 py-0.5 text-[9px] font-extrabold tracking-wider rounded-md bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-amber-950 shadow-sm animate-pulse">
+                      {item.badge}
+                    </span>
+                  )}
                   {isActive && <span className="ds-menu-btn__dot" aria-hidden />}
                 </button>
               );
@@ -425,8 +430,12 @@ export default function Navbar({ onNavigate }: NavbarProps) {
                   aria-current={isActive ? "page" : undefined}
                   tabIndex={isMenuOpen ? 0 : -1}
                 >
-                  
-                  {item.label}
+                  <span>{item.label}</span>
+                  {item.badge && (
+                    <span className="ml-2 px-1.5 py-0.5 text-[9px] font-extrabold tracking-wider rounded-md bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-amber-950 shadow-sm">
+                      {item.badge}
+                    </span>
+                  )}
                 </button>
               );
             })}
